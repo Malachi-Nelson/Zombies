@@ -185,7 +185,7 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
 /* Online play outside Claude: a small peer-to-peer room. The link's #code names the room. The first browser to open a code
    becomes the hub and passes each player's state on to the others; everyone else connects to it. No game server. */
 (() => {
-  const PREFIX = 'fh935-';
+  const PREFIX = 'fh935-', STALE = 7000;   // a peer that says nothing for this long has gone, even if its browser never said goodbye
   let code = (location.hash || '').replace(/^#/, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
   const fresh = !code;
   if (fresh) { code = Math.random().toString(36).slice(2, 8); try { history.replaceState(null, '', '#' + code); } catch (e) { location.hash = code; } }
@@ -197,24 +197,27 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
   const fail = () => status('Could not reach the matchmaking service. Solo still works; reload to try again.');
   function beHub() {
     if (++tries > 4) return fail();
-    const po = peerObj = new Peer(PREFIX + code);
+    const po = peerObj = new Peer(PREFIX + code, window.PEER_OPTS);
     po.on('open', id => { me = id; isHub = true; up = true; table[me] = mine; status('Room ' + code + ' is open. Send the link to your friends.'); fire(); });
     po.on('connection', c => {
-      c.on('open', () => { conns[c.peer] = c; for (const k in table) c.send({ t: 'u', peer: k, pres: table[k] }); });
-      c.on('data', d => { if (!d || d.t !== 'p') return; setP(c.peer, d.pres); for (const k in conns) if (k !== c.peer && conns[k].open) conns[k].send({ t: 'u', peer: c.peer, pres: d.pres }); });
+      c.on('open', () => { c.seen = Date.now(); c.gone = gone; conns[c.peer] = c; for (const k in table) c.send({ t: 'u', peer: k, pres: table[k] }); });
+      c.on('data', d => { c.seen = Date.now(); if (!d || d.t !== 'p') return; setP(c.peer, d.pres); for (const k in conns) if (k !== c.peer && conns[k].open) conns[k].send({ t: 'u', peer: c.peer, pres: d.pres }); });
       const gone = () => { if (!conns[c.peer]) return; delete conns[c.peer]; setP(c.peer, null); for (const k in conns) if (conns[k].open) conns[k].send({ t: 'x', peer: c.peer }); };
       c.on('close', gone); c.on('error', gone);
     });
+    setInterval(() => { const now = Date.now(); for (const k in conns) { const c = conns[k]; if (now - c.seen > STALE) { c.gone(); try { c.close(); } catch (e) {} } else if (c.open) c.send({ t: 'k' }); } }, 2000);
     po.on('error', e => { if (up) return; if (e && e.type === 'unavailable-id') { po.destroy(); beClient(); } else fail(); });
   }
   function beClient() {
     if (++tries > 4) return fail();
-    const po = peerObj = new Peer();
+    const po = peerObj = new Peer(undefined, window.PEER_OPTS);
     po.on('open', id => {
       me = id; hub = po.connect(PREFIX + code, { reliable: true });
       hub.on('open', () => { up = true; table[me] = mine; hub.send({ t: 'p', pres: mine }); status('Connected to room ' + code + '.'); fire(); });
-      hub.on('data', d => { if (!d) return; if (d.t === 'u' && d.peer !== me) setP(d.peer, d.pres); else if (d.t === 'x') setP(d.peer, null); });
-      hub.on('close', () => { up = false; for (const k in table) if (k !== me) delete table[k]; status('The room has closed. Reload the page to open it again.'); fire(); });
+      hub.on('data', d => { heard = Date.now(); if (!d) return; if (d.t === 'u' && d.peer !== me) setP(d.peer, d.pres); else if (d.t === 'x') setP(d.peer, null); });
+      const shut = () => { if (!up) return; up = false; for (const k in table) if (k !== me) delete table[k]; status('The room has closed. Reload the page to open it again.'); fire(); };
+      hub.on('close', shut); let heard = Date.now();
+      setInterval(() => { if (!up) return; if (Date.now() - heard > STALE) { shut(); try { hub.close(); } catch (e) {} } else if (hub.open) hub.send({ t: 'k' }); }, 2000);
     });
     po.on('error', e => { if (up) return; if (e && e.type === 'peer-unavailable') { po.destroy(); beHub(); } else fail(); });
   }
@@ -1566,13 +1569,28 @@ function applyMono(w) {
   PADS.forEach((p, i) => { if ((w.pl >> i & 1) && !p.linked) { p.linked = true; ch = true; } });
   if (ch) syncOpenVisuals();
 }
-const AV = { suit: new T.MeshLambertMaterial({ color: 0x2f382b }), mask: new T.MeshLambertMaterial({ color: 0x15181a }), lens: new T.MeshBasicMaterial({ color: 0x8fd0c0 }) };
-function buildAvatar() {   // another player: gas-masked soldier, clearly not a zombie
-  const g = new T.Group(), add = (geo, mat, x, y, z) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); g.add(m); return m; };
-  add(ZG.leg, AV.suit, -.13, .425, 0); add(ZG.leg, AV.suit, .13, .425, 0); add(ZG.torso, AV.suit, 0, 1.16, 0);
-  add(ZG.arm, AV.suit, -.3, 1.25, .2).rotation.x = -1.2; add(ZG.arm, AV.suit, .3, 1.25, .2).rotation.x = -1.2;
-  add(ZG.head, AV.mask, 0, 1.6, 0); add(new T.BoxGeometry(.3, .1, .3), AV.suit, 0, 1.76, 0); [-.06, .06].forEach(x => add(ZG.eye, AV.lens, x, 1.62, .13)); add(new T.BoxGeometry(.06, .07, .55), AV.mask, .2, 1.3, .45);
-  scene.add(g); return g;
+// Other players: the squad. Black greatcoat, steel helmet, gas mask with a filter canister, rifle at the ready. The unit mark is the fictional "935".
+const AV = { coat: new T.MeshLambertMaterial({ color: 0x1b1e21 }), leather: new T.MeshLambertMaterial({ color: 0x0c0d0e }), steel: new T.MeshLambertMaterial({ color: 0x262b2e }), rubber: new T.MeshLambertMaterial({ color: 0x141617 }),
+  lens: new T.MeshBasicMaterial({ color: 0x7fc4b4 }), web: new T.MeshLambertMaterial({ color: 0x3a3326 }), can: new T.MeshLambertMaterial({ color: 0x3d463a }), band: new T.MeshLambertMaterial({ color: 0x9a9d98 }), wood: new T.MeshLambertMaterial({ color: 0x4a3220 }) };
+function buildAvatar() {
+  const g = new T.Group(), parts = {};
+  const add = (par, geo, mat, x, y, z) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); par.add(m); return m; };
+  const box = (w, h, d) => new T.BoxGeometry(w, h, d), cyl = (r, h, n) => new T.CylinderGeometry(r, r, h, n || 10);
+  [['lL', -.12], ['lR', .12]].forEach(([k, x]) => { const pv = new T.Group(); pv.position.set(x, .86, 0); add(pv, box(.17, .5, .19), AV.coat, 0, -.25, 0); add(pv, box(.18, .38, .21), AV.leather, 0, -.67, .005); add(pv, box(.18, .09, .3), AV.leather, 0, -.82, .05); g.add(pv); parts[k] = pv; });   // trousers, jackboots
+  add(g, box(.5, .62, .28), AV.coat, 0, 1.17, 0);                                  // greatcoat body
+  add(g, box(.54, .46, .32), AV.coat, 0, .72, 0);                                  // coat skirt to the knee
+  add(g, box(.52, .07, .3), AV.leather, 0, .93, 0); add(g, box(.08, .06, .02), AV.steel, 0, .93, .16);   // belt and buckle
+  [-.14, .14].forEach(x => { add(g, box(.05, .56, .02), AV.web, x, 1.2, .15); add(g, box(.12, .1, .07), AV.web, x * 1.25, .99, .17); });   // Y-straps, ammunition pouches
+  add(g, cyl(.07, .26, 10), AV.can, -.2, .96, -.17).rotation.z = Math.PI / 2;      // gas-mask canister carried on the back of the belt
+  add(g, box(.3, .1, .26), AV.coat, 0, 1.5, 0);                                    // collar
+  [-1, 1].forEach(sd => { const sh = new T.Group(); sh.position.set(sd * .31, 1.42, 0); sh.rotation.order = 'YXZ'; sh.rotation.x = sd < 0 ? -1.25 : -1.0; sh.rotation.y = sd * -.42; add(sh, box(.13, .34, .14), AV.coat, 0, -.17, 0); add(sh, box(.12, .3, .13), AV.coat, 0, -.45, 0); add(sh, box(.1, .1, .11), AV.leather, 0, -.63, 0); if (sd < 0) add(sh, box(.14, .08, .15), AV.band, 0, -.12, 0); g.add(sh); });   // arms, gloves, plain unit armband
+  { const gun = new T.Group(); gun.position.set(.04, 1.17, .4); gun.rotation.y = .16; add(gun, box(.05, .08, .62), AV.wood, 0, 0, 0); add(gun, cyl(.014, .5, 6), AV.steel, 0, .025, .5).rotation.x = Math.PI / 2; add(gun, box(.045, .11, .22), AV.wood, 0, -.04, -.38); g.add(gun); }   // rifle
+  const head = new T.Group(); head.position.set(0, 1.66, 0);
+  add(head, box(.22, .25, .24), AV.rubber, 0, 0, 0);                               // mask facepiece
+  [-.055, .055].forEach(x => { const l = add(head, cyl(.042, .03, 12), AV.lens, x, .035, .125); l.rotation.x = Math.PI / 2; const rim = add(head, cyl(.05, .02, 12), AV.steel, x, .035, .118); rim.rotation.x = Math.PI / 2; });
+  add(head, cyl(.055, .09, 12), AV.can, 0, -.1, .15).rotation.x = Math.PI / 2;      // filter screwed to the snout
+  { const dome = add(head, new T.SphereGeometry(.17, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), AV.steel, 0, .07, -.01); dome.scale.set(1, .95, 1.12); add(head, box(.37, .035, .42), AV.steel, 0, .075, -.03); add(head, box(.36, .1, .2), AV.steel, 0, .02, -.13); }   // helmet: dome, brim, neck guard
+  g.add(head); parts.head = head; scene.add(g); g.userData.parts = parts; return g;
 }
 const myPos = () => [Math.round(P.x * 100) / 100, Math.round(P.y * 100) / 100, Math.round(P.z * 100) / 100, Math.round(P.yaw * 100) / 100];
 // other players: read where each one is, draw them, forget the ones who left. Returns the host's entry when called by a joined player.
@@ -1587,8 +1605,9 @@ function netPeers(dt, each) {
     seen[pr.peer] = 1;
     let r = NET.remotes[pr.peer];
     if (!r) { r = NET.remotes[pr.peer] = { peer: pr.peer, g: buildAvatar(), x: s.p[0], y: s.p[1], z: s.p[2], yaw: s.p[3], node: 0, nodeT: 0, hs: 0, qs: 0, dn: false }; if (NET.mode === 'host') banner('A player joined', Object.keys(NET.remotes).length + 1 + ' players in the blockhouse', 2.5); }
-    const k = Math.min(1, dt * 12); r.x = lerp(r.x, s.p[0], k); r.y = lerp(r.y, s.p[1], k); r.z = lerp(r.z, s.p[2], k); r.yaw = s.p[3]; r.dn = !!s.dn;
-    r.g.position.set(r.x, r.y, r.z); r.g.rotation.set(r.dn ? -1.5 : 0, r.yaw + Math.PI, 0);
+    const k = Math.min(1, dt * 12), ox = r.x, oz = r.z; r.x = lerp(r.x, s.p[0], k); r.y = lerp(r.y, s.p[1], k); r.z = lerp(r.z, s.p[2], k); r.yaw = s.p[3]; r.dn = !!s.dn;
+    const sp = Math.hypot(r.x - ox, r.z - oz) / Math.max(dt, .001), pt = r.g.userData.parts; r.ph = (r.ph || 0) + dt * (2 + sp * 1.8); const sw = sp > .2 && !r.dn ? Math.sin(r.ph) * .55 : 0; pt.lL.rotation.x = sw; pt.lR.rotation.x = -sw;
+    r.g.position.set(r.x, r.y + (r.dn ? .25 : 0), r.z); r.g.rotation.set(r.dn ? -1.5 : 0, r.yaw + Math.PI, 0);
     if (each) each(pr, s, r);
   }
   for (const k in NET.remotes) if (!seen[k]) { scene.remove(NET.remotes[k].g); delete NET.remotes[k]; }
