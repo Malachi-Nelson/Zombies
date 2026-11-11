@@ -1,0 +1,1733 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fliegerhorst 935 Blockhouse</title>
+<style>html,body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Barlow+Condensed:wght@400;500;600&family=Share+Tech+Mono&display=swap">
+<style>
+/* Layout: full-bleed 3D viewport; HUD pinned to the corners like a gunsight reticle plate; one briefing card centred over the live scene. Single dark look by choice. */
+:root{
+  --concrete:#14181c; --panel:#1d2329; --steel:#66757f; --bone:#ddd8c6; --chalk:#f3f1e8;
+  --blood:#bd2a20; --sodium:#e4a437; --echo:#9fd8ff;
+  --font-display:'Big Shoulders Stencil Display','Impact','Arial Narrow',sans-serif;
+  --font-body:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;
+  --font-data:'Share Tech Mono',ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--concrete);color:var(--bone);font-family:var(--font-body);font-size:16px;overflow:hidden;-webkit-user-select:none;user-select:none}
+#game{position:relative;height:100%;overflow:hidden}
+#view{position:absolute;inset:0;width:100%;height:100%;display:block;background:var(--concrete)}
+#hud{position:absolute;inset:0;pointer-events:none;padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#hud>*{position:absolute}
+#h-zone{top:16px;left:max(16px,env(safe-area-inset-left,0px));font-family:var(--font-data);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--steel)}
+#h-power{top:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;font-family:var(--font-data);font-size:13px;letter-spacing:.08em}
+#h-power span{padding:3px 8px;border:1px solid var(--sodium);color:var(--sodium);background:rgba(20,24,28,.6)}
+#h-round{bottom:10px;left:max(16px,env(safe-area-inset-left,0px));font-family:var(--font-display);font-weight:800;font-size:clamp(56px,11vw,112px);line-height:.85;color:var(--blood);text-shadow:0 0 18px rgba(189,42,32,.45)}
+#h-right{bottom:14px;right:max(16px,env(safe-area-inset-right,0px));text-align:right;display:flex;flex-direction:column;gap:2px;align-items:flex-end}
+#h-points{font-family:var(--font-data);font-size:clamp(20px,3.4vw,30px);color:var(--sodium);font-variant-numeric:tabular-nums}
+#h-gain{font-family:var(--font-data);font-size:15px;color:var(--chalk);opacity:0;height:18px}
+#h-gain.on{animation:gain .9s ease-out}
+@keyframes gain{0%{opacity:1;transform:translateY(6px)}100%{opacity:0;transform:translateY(-10px)}}
+#h-weapon{font-size:17px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone);margin-top:6px}
+#h-ammo{font-family:var(--font-data);font-size:clamp(28px,5vw,44px);line-height:1;color:var(--chalk);font-variant-numeric:tabular-nums}
+#h-ammo small{font-size:.5em;color:var(--steel)}
+#h-gren{font-family:var(--font-data);font-size:13px;color:var(--steel);letter-spacing:.2em}
+#h-prompt{left:50%;bottom:24%;transform:translateX(-50%);font-size:clamp(16px,2.4vw,21px);font-weight:500;letter-spacing:.04em;color:var(--chalk);text-shadow:0 1px 6px #000,0 0 2px #000;white-space:nowrap}
+#h-prompt b{font-family:var(--font-data);font-weight:400;color:var(--sodium)}
+#h-banner{left:50%;top:22%;transform:translateX(-50%);text-align:center;opacity:0;transition:opacity .5s;width:min(90%,640px)}
+#h-banner.on{opacity:1}
+#h-banner .big{font-family:var(--font-display);font-weight:800;font-size:clamp(34px,7vw,68px);line-height:1;letter-spacing:.04em;color:var(--blood);text-wrap:balance}
+#h-banner.night .big{color:var(--echo)}
+#h-banner .sub{font-size:clamp(15px,2.2vw,20px);letter-spacing:.12em;text-transform:uppercase;color:var(--bone);margin-top:6px}
+#cross{left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;opacity:.85}
+#cross i{position:absolute;background:var(--chalk);box-shadow:0 0 2px #000}
+#cross i:nth-child(1){left:12px;top:0;width:2px;height:8px}
+#cross i:nth-child(2){left:12px;bottom:0;width:2px;height:8px}
+#cross i:nth-child(3){top:12px;left:0;height:2px;width:8px}
+#cross i:nth-child(4){top:12px;right:0;height:2px;width:8px}
+#hitm{left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;opacity:0;transform:rotate(45deg)}
+#hitm::before,#hitm::after{content:"";position:absolute;background:var(--chalk)}
+#hitm::before{left:10px;top:0;width:2px;height:22px}
+#hitm::after{top:10px;left:0;height:2px;width:22px}
+#hitm.head::before,#hitm.head::after{background:var(--blood)}
+#vign{inset:0;background:radial-gradient(ellipse at center,rgba(189,42,32,0) 40%,rgba(189,42,32,.75) 100%);opacity:0}
+#flash{inset:0;background:var(--chalk);opacity:0}
+#h-cond{font-family:var(--font-data);font-size:14px;letter-spacing:.16em;text-transform:uppercase;color:#6fbf73}
+#h-cond.caution{color:var(--sodium)}
+#h-cond.danger{color:var(--blood)}
+#hud.night #shade{background:radial-gradient(ellipse at center,rgba(0,0,0,0) 30%,rgba(0,0,0,.8) 100%)}
+#hud.night #grain{opacity:.12}
+#h-dev{top:16px;right:max(16px,env(safe-area-inset-right,0px));text-align:right;font-family:var(--font-data);font-size:12px;line-height:1.5;color:var(--sodium);white-space:pre;text-shadow:0 0 3px #000}
+#dev{position:absolute;top:12px;left:max(16px,env(safe-area-inset-left,0px));width:min(360px,calc(100% - 32px));max-height:calc(100% - 24px);overflow-y:auto;background:rgba(29,35,41,.97);border:1px solid var(--sodium);padding:14px;display:flex;flex-direction:column;gap:10px;font-family:var(--font-data);font-size:13px;color:var(--bone);z-index:5;-webkit-user-select:auto;user-select:auto}
+#dev .dev-h{display:flex;justify-content:space-between;align-items:baseline;color:var(--sodium);letter-spacing:.16em;font-size:14px}
+#dev .dev-h span{color:var(--steel);font-size:11px;letter-spacing:.06em}
+#dev .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#dev .checks{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+#dev label{display:flex;gap:6px;align-items:center;cursor:pointer}
+#dev kbd{color:var(--steel);font-family:inherit;font-size:11px}
+#dev button,#dev select,#dev input[type=number]{font-family:inherit;font-size:13px;color:var(--chalk);background:var(--concrete);border:1px solid var(--steel);padding:5px 8px;min-width:0}
+#dev button{cursor:pointer}
+#dev button:hover{border-color:var(--sodium);color:var(--sodium)}
+#dev button:focus-visible,#dev select:focus-visible,#dev input:focus-visible{outline:2px solid var(--sodium);outline-offset:1px}
+#dev input[type=number]{width:70px}
+#dev input[type=range]{flex:1;min-width:80px;accent-color:var(--sodium)}
+#dev select{flex:1}
+#dev #dv-close{background:var(--blood);border-color:var(--blood);color:var(--chalk)}
+#shade{inset:0;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 42%,rgba(0,0,0,.42) 100%)}
+#grain{inset:-64px;opacity:.045;animation:grain .45s steps(4) infinite}
+@keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(-31px,17px)}50%{transform:translate(23px,-41px)}75%{transform:translate(-47px,-9px)}100%{transform:translate(0,0)}}
+#overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(20,24,28,.72),rgba(20,24,28,.9));padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-y:auto}
+.card{width:min(100%,600px);background:var(--panel);border:1px solid var(--steel);padding:clamp(20px,4vw,34px);display:flex;flex-direction:column;gap:16px;margin:auto}
+.eyebrow{font-family:var(--font-data);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--steel)}
+.card h1{font-family:var(--font-display);font-weight:800;font-size:clamp(40px,9vw,72px);line-height:.9;margin:0;color:var(--chalk);letter-spacing:.02em;text-wrap:balance}
+.card h1 em{font-style:normal;color:var(--blood)}
+.card p{margin:0;font-size:18px;line-height:1.4;max-width:60ch;color:var(--bone)}
+.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px 18px;margin:0;padding:14px 0;border-top:1px solid rgba(102,117,127,.4);border-bottom:1px solid rgba(102,117,127,.4)}
+.keys div{display:flex;gap:10px;align-items:baseline;min-width:0}
+.keys dt{font-family:var(--font-data);font-size:13px;color:var(--sodium);min-width:74px}
+.keys dd{margin:0;font-size:16px;color:var(--bone)}
+.stats{display:flex;flex-wrap:wrap;gap:8px 28px;font-family:var(--font-data);font-size:15px;color:var(--chalk)}
+.stats b{font-weight:400;color:var(--sodium)}
+#deploy{font-family:var(--font-display);font-weight:800;font-size:28px;letter-spacing:.08em;color:var(--chalk);background:var(--blood);border:0;padding:12px 28px;cursor:pointer;align-self:flex-start}
+#deploy:hover{filter:brightness(1.15)}
+#deploy:focus-visible{outline:2px solid var(--sodium);outline-offset:3px}
+.coop{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.coop button{font-family:var(--font-display);font-weight:800;font-size:20px;letter-spacing:.06em;color:var(--chalk);background:transparent;border:1px solid var(--sodium);padding:8px 16px;cursor:pointer}
+.coop button:hover:not(:disabled){background:rgba(228,164,55,.14)}
+.coop button:disabled{border-color:var(--steel);color:var(--steel);cursor:default}
+.coop button:focus-visible{outline:2px solid var(--sodium);outline-offset:3px}
+.coop span{font-family:var(--font-data);font-size:13px;color:var(--steel);min-width:0}
+.note{font-size:14px !important;color:var(--steel) !important}
+.maps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.map{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--steel);color:var(--bone);text-decoration:none;min-width:0}
+.map b{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:.04em;color:var(--chalk)}
+.map small{font-family:var(--font-data);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--steel)}
+.map.on{border-color:var(--sodium);background:rgba(228,164,55,.08)}
+.map.on small{color:var(--sodium)}
+a.map:hover{border-color:var(--chalk)}
+a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){#grain{animation:none}#h-banner{transition:none}#h-gain.on{animation:none;opacity:1}}
+</style>
+
+<div id="game">
+  <canvas id="view" aria-label="Game view"></canvas>
+  <div id="hud" hidden>
+    <div id="shade"></div><div id="grain"></div><div id="vign"></div><div id="flash"></div>
+    <div id="h-zone"></div>
+    <div id="h-dev"></div>
+    <div id="h-power"></div>
+    <div id="cross"><i></i><i></i><i></i><i></i></div>
+    <div id="hitm"></div>
+    <div id="h-banner"><div class="big"></div><div class="sub"></div></div>
+    <div id="h-prompt"></div>
+    <div id="h-round"></div>
+    <div id="h-right">
+      <div id="h-gain"></div>
+      <div id="h-points">500</div>
+      <div id="h-weapon"></div>
+      <div id="h-ammo"></div>
+      <div id="h-gren"></div>
+      <div id="h-cond"></div>
+    </div>
+  </div>
+  <div id="dev" hidden>
+    <div class="dev-h">DEV MENU <span>` or Resume to close</span></div>
+    <div class="checks">
+      <label><input type="checkbox" id="dv-god"> God mode <kbd>H</kbd></label>
+      <label><input type="checkbox" id="dv-noclip"> No clip <kbd>N</kbd></label>
+      <label><input type="checkbox" id="dv-ammo"> Infinite ammo</label>
+      <label><input type="checkbox" id="dv-freeze"> Freeze zombies</label>
+      <label><input type="checkbox" id="dv-notarget"> No target</label>
+      <label><input type="checkbox" id="dv-stats"> Stats readout</label>
+      <label><input type="checkbox" id="dv-nav"> Show nav graph</label>
+      <label><input type="checkbox" id="dv-lights"> Full bright</label>
+    </div>
+    <div class="row"><label for="dv-round">Round</label><input type="number" id="dv-round" min="1" max="999" value="5"><button type="button" id="dv-setround">Set round</button><button type="button" id="dv-night">Force night</button></div>
+    <div class="row"><button type="button" id="dv-p1k">+1,000 pts</button><button type="button" id="dv-p10k">+10,000 pts</button><button type="button" id="dv-refill">Refill ammo</button><button type="button" id="dv-heal">Heal</button></div>
+    <div class="row"><select id="dv-weapon" aria-label="Weapon"></select><button type="button" id="dv-give">Give weapon</button></div>
+    <div class="row"><select id="dv-power" aria-label="Power-up"></select><button type="button" id="dv-drop">Drop</button><button type="button" id="dv-kit">Drop dressing</button></div>
+    <div class="row"><select id="dv-tp" aria-label="Teleport destination"></select><button type="button" id="dv-go">Teleport</button></div>
+    <div class="row"><button type="button" id="dv-kill">Kill all <kbd>K</kbd></button><button type="button" id="dv-spawn">Spawn zombie</button><button type="button" id="dv-doors">Open doors</button><button type="button" id="dv-parts">Give crank parts</button><button type="button" id="dv-blast">Open airfield</button><button type="button" id="dv-mains">Power on</button><button type="button" id="dv-link">Link all pads</button><button type="button" id="dv-fix">Fix windows</button><button type="button" id="dv-break">Break windows</button><button type="button" id="dv-crate">Move crate</button></div>
+    <div class="row"><label for="dv-scale">Game speed</label><input type="range" id="dv-scale" min="0.25" max="3" step="0.25" value="1"><span id="dv-scalev">1x</span></div>
+    <button type="button" id="dv-close">Resume</button>
+  </div>
+  <div id="overlay">
+    <div class="card">
+      <div class="eyebrow" id="o-eyebrow">Luftwaffe auxiliary airstrip · January 1945</div>
+      <h1 id="o-title">Fliegerhorst <em>935</em></h1>
+      <p id="o-text">Your transport is burning on the runway. The blockhouse is the only cover, and the ground crew outside are not ground crew any more. Hold the windows, buy your way upstairs, and last as many rounds as you can.</p>
+      <div class="stats" id="o-stats" hidden></div>
+      <dl class="keys">
+        <div><dt>W A S D</dt><dd>Move</dd></div>
+        <div><dt>Mouse</dt><dd>Aim · fire · right-click sights</dd></div>
+        <div><dt>Shift</dt><dd>Sprint</dd></div>
+        <div><dt>Space</dt><dd>Jump</dd></div>
+        <div><dt>F / E</dt><dd>Buy · open · rebuild</dd></div>
+        <div><dt>R</dt><dd>Reload</dd></div>
+        <div><dt>Q / 1 2</dt><dd>Swap weapon</dd></div>
+        <div><dt>G · V</dt><dd>Grenade · knife</dd></div>
+      </dl>
+      <button id="deploy" type="button">Deploy</button>
+      <div class="coop"><button id="co-host" type="button" disabled>Host co-op</button><button id="co-join" type="button" disabled>Join co-op</button><span id="co-status">Co-op: connecting…</span></div>
+      <p class="note" id="o-note">Needs a keyboard and mouse. Esc pauses. The ` key opens the dev menu. Co-op: send friends the invite link below, one player hosts, the others join.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+/* Online play outside Claude: a small peer-to-peer room. The link's #code names the room. The first browser to open a code
+   becomes the hub and passes each player's state on to the others; everyone else connects to it. No game server. */
+(() => {
+  const PREFIX = 'fh935-';
+  let code = (location.hash || '').replace(/^#/, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
+  const fresh = !code;
+  if (fresh) { code = Math.random().toString(36).slice(2, 8); try { history.replaceState(null, '', '#' + code); } catch (e) { location.hash = code; } }
+  const table = {}, subs = [];
+  let me = null, hub = null, conns = {}, isHub = false, peerObj = null, up = false, mine = {}, tries = 0, started = false;
+  const fire = () => subs.forEach(f => { try { f({}); } catch (e) {} });
+  const setP = (peer, pres) => { if (pres === null) delete table[peer]; else table[peer] = pres; fire(); };
+  const status = t => { const el = document.getElementById('co-link-status'); if (el) el.textContent = t; };
+  const fail = () => status('Could not reach the matchmaking service. Solo still works; reload to try again.');
+  function beHub() {
+    if (++tries > 4) return fail();
+    const po = peerObj = new Peer(PREFIX + code);
+    po.on('open', id => { me = id; isHub = true; up = true; table[me] = mine; status('Room ' + code + ' is open. Send the link to your friends.'); fire(); });
+    po.on('connection', c => {
+      c.on('open', () => { conns[c.peer] = c; for (const k in table) c.send({ t: 'u', peer: k, pres: table[k] }); });
+      c.on('data', d => { if (!d || d.t !== 'p') return; setP(c.peer, d.pres); for (const k in conns) if (k !== c.peer && conns[k].open) conns[k].send({ t: 'u', peer: c.peer, pres: d.pres }); });
+      const gone = () => { if (!conns[c.peer]) return; delete conns[c.peer]; setP(c.peer, null); for (const k in conns) if (conns[k].open) conns[k].send({ t: 'x', peer: c.peer }); };
+      c.on('close', gone); c.on('error', gone);
+    });
+    po.on('error', e => { if (up) return; if (e && e.type === 'unavailable-id') { po.destroy(); beClient(); } else fail(); });
+  }
+  function beClient() {
+    if (++tries > 4) return fail();
+    const po = peerObj = new Peer();
+    po.on('open', id => {
+      me = id; hub = po.connect(PREFIX + code, { reliable: true });
+      hub.on('open', () => { up = true; table[me] = mine; hub.send({ t: 'p', pres: mine }); status('Connected to room ' + code + '.'); fire(); });
+      hub.on('data', d => { if (!d) return; if (d.t === 'u' && d.peer !== me) setP(d.peer, d.pres); else if (d.t === 'x') setP(d.peer, null); });
+      hub.on('close', () => { up = false; for (const k in table) if (k !== me) delete table[k]; status('The room has closed. Reload the page to open it again.'); fire(); });
+    });
+    po.on('error', e => { if (up) return; if (e && e.type === 'peer-unavailable') { po.destroy(); beHub(); } else fail(); });
+  }
+  const room = {
+    peers: () => Object.keys(table).map(k => ({ peer: k, presence: table[k], isMe: k === me, sameTab: k === me, kind: 'viewer', guest: false, by: null })),
+    presence: patch => {
+      const o = Object.assign({}, mine); for (const k in patch) { if (patch[k] === null) delete o[k]; else o[k] = patch[k]; }
+      mine = o; if (me) table[me] = mine;
+      if (up) { const msg = JSON.parse(JSON.stringify(mine)); if (isHub) { for (const k in conns) if (conns[k].open) conns[k].send({ t: 'u', peer: me, pres: msg }); } else if (hub && hub.open) hub.send({ t: 'p', pres: msg }); }
+      return Promise.resolve();
+    },
+    onPeers: fn => { subs.push(fn); return () => {}; },
+    join: () => Promise.reject(new Error('one room per link')),
+  };
+  window.claude = { use: async name => {
+    if (name !== 'room' || typeof Peer === 'undefined') return null;
+    if (!started) { started = true; if (fresh) beHub(); else beClient(); }
+    return room;
+  } };
+  const coop = document.querySelector('.coop');
+  if (coop) {
+    const row = document.createElement('div'); row.className = 'coop';
+    row.innerHTML = '<input id="co-link" readonly aria-label="Invite link" style="flex:1;min-width:180px;font:13px ui-monospace,monospace;padding:8px;background:#14181c;color:#f3f1e8;border:1px solid #66757f"><button type="button" id="co-copy">Copy invite link</button><span id="co-link-status">Opening a room…</span>';
+    coop.after(row);
+    const input = document.getElementById('co-link'), btn = document.getElementById('co-copy'); input.value = location.href;
+    btn.addEventListener('click', () => { const done = () => { btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy invite link', 1500); }; if (navigator.clipboard) navigator.clipboard.writeText(input.value).then(done, () => input.select()); else input.select(); });
+  }
+})();
+</script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+if (!window.THREE) { $('o-text').textContent = 'The 3D library could not load, so the game cannot start here.'; $('deploy').hidden = true; return; }
+const T = THREE, rand = Math.random, clamp = (v, a, b) => v < a ? a : v > b ? b : v, lerp = (a, b, t) => a + (b - a) * t;
+
+/* =====================================================================
+   1. TUNING TABLES  (copy these straight into engine data assets)
+   ===================================================================== */
+const CFG = {
+  player: { r: .35, h: 1.8, eye: 1.62, walk: 4.6, sprint: 6.9, jump: 6.6, hp: 100, regenDelay: 3.5, regenRate: 40 },
+  zombie: { r: .3, h: 1.7, walk: 1.15, run: 3.3, sprint: 4.8, dmg: 50 },
+  gravity: 22, step: .5,
+  cost: { doorA: 750, debris: 1000, crate: 950 },
+  pts: { hit: 10, kill: 60, head: 100, knife: 130, nade: 50, board: 10 },
+  startPoints: 500, boards: 5,
+};
+const WEAPONS = {
+  p38:      { name: 'Walther P38',     dmg: 45,  head: 3.5, mag: 8,   res: 48,  rpm: 420,  auto: false, reload: 1.5, spread: .012, pellets: 1, pierce: 1, kick: .05, zoom: 62, snd: [.13, 2600], vm: { len: .2,  stock: 0, mag: 0,   wood: 0 } },
+  kar98k:   { name: 'Karabiner 98k',   dmg: 190, head: 2.5, mag: 5,   res: 50,  rpm: 55,   auto: false, reload: 2.4, spread: .004, pellets: 1, pierce: 3, kick: .13, zoom: 42, snd: [.32, 1500], vm: { len: .78, stock: 1, mag: 0,   wood: 1 }, cost: 500 },
+  mp40:     { name: 'MP 40',           dmg: 50,  head: 2.5, mag: 32,  res: 192, rpm: 520,  auto: true,  reload: 2.2, spread: .02,  pellets: 1, pierce: 1, kick: .04, zoom: 58, snd: [.12, 2200], vm: { len: .5,  stock: 0, mag: .2,  wood: 0 }, cost: 1000 },
+  thompson: { name: 'Thompson M1A1',   dmg: 55,  head: 2.5, mag: 30,  res: 180, rpm: 700,  auto: true,  reload: 2.3, spread: .022, pellets: 1, pierce: 1, kick: .045,zoom: 58, snd: [.12, 1900], vm: { len: .55, stock: 1, mag: .17, wood: 1 }, cost: 1200 },
+  trench:   { name: 'M1897 Trench Gun',dmg: 60,  head: 1.5, mag: 6,   res: 54,  rpm: 70,   auto: false, reload: 3.0, spread: .06,  pellets: 8, pierce: 1, kick: .16, zoom: 60, snd: [.35, 1100], vm: { len: .7,  stock: 1, mag: 0,   wood: 1 }, cost: 1500 },
+  stg44:    { name: 'StG 44',          dmg: 80,  head: 2.5, mag: 30,  res: 180, rpm: 550,  auto: true,  reload: 2.4, spread: .014, pellets: 1, pierce: 2, kick: .05, zoom: 50, snd: [.16, 1700], vm: { len: .62, stock: 1, mag: .2,  wood: 0 }, cost: 1800 },
+  mg42:     { name: 'MG 42',           dmg: 70,  head: 2.2, mag: 125, res: 375, rpm: 1100, auto: true,  reload: 4.6, spread: .03,  pellets: 1, pierce: 2, kick: .035,zoom: 55, snd: [.11, 1500], vm: { len: .92, stock: 1, mag: .1,  wood: 0 }, cost: 3000 },
+  ppsh:     { name: 'PPSh-41',         dmg: 45,  head: 2.5, mag: 71,  res: 284, rpm: 950,  auto: true,  reload: 2.6, spread: .026, pellets: 1, pierce: 1, kick: .03, zoom: 58, snd: [.1, 2400],  vm: { len: .55, stock: 1, mag: .09, wood: 1 }, cost: 1600 },
+  fg42:     { name: 'FG 42',           dmg: 95,  head: 2.5, mag: 20,  res: 160, rpm: 700,  auto: true,  reload: 2.5, spread: .012, pellets: 1, pierce: 2, kick: .06, zoom: 46, snd: [.16, 1600], vm: { len: .7,  stock: 1, mag: .12, wood: 1 } },
+  funk:     { name: 'Funkenwerfer 935',dmg: 3000,head: 1,   mag: 3,   res: 12,  rpm: 50,   auto: false, reload: 3.2, spread: 0,    pellets: 1, pierce: 8, kick: .2,  zoom: 52, snd: [.5, 700],   vm: { len: .6,  stock: 1, mag: .08, wood: 0 }, beam: true },
+};
+const CRATE_POOL = ['stg44', 'mg42', 'ppsh', 'fg42', 'funk', 'trench', 'thompson'];
+const ROUNDS = {
+  // HORDE SCALING. Health climbs for 15 rounds and then almost stops; from there the danger is numbers, pack size, sprinters and faster board-tearing.
+  count: r => r === 1 ? 6 : Math.floor(6 + r * 2.6 + r * r * .45),
+  hp: r => r < 10 ? 150 + 90 * (r - 1) : r <= 15 ? Math.round(870 * Math.pow(1.08, r - 9)) : Math.round(870 * Math.pow(1.08, 6) * Math.pow(1.025, r - 15)),
+  maxAlive: r => Math.min(48, Math.round(20 + r * 1.4)),               // 21 alive at once on round 1, 34 by round 10, 48 from round 20
+  packSize: r => clamp(3 + Math.floor(r / 2) + Math.floor(rand() * 3), 4, 10),   // zombies arrive in packs from one direction...
+  packLull: r => Math.max(2.5, 8 - r * .3) + rand() * 2,                // ...with a quiet gap between packs (seconds)
+  packGap: .3,                                                          // seconds between zombies inside a pack
+  sprintShare: r => r < 9 ? 0 : Math.min(.75, .3 + (r - 9) * .03),
+  tearTime: r => Math.max(.6, 1.4 - r * .04),                           // seconds per board
+  opening: { firstDelay: 18, plan: [1, 1, 4], lulls: [11, 15] },        // round 1 is scripted: one, one, a long silence, then four at once
+  isNight: r => r >= 5 && (r - 5) % 4 === 0,          // Night Rounds replace hound rounds
+  nightCount: r => Math.max(4, 5 + Math.floor((r - 5) / 2)),
+  nightHp: r => Math.round(ROUNDS.hp(r) * 2.2),   // slow but takes a lot of killing; aim for the head
+  nightHeal: 60, nightKits: 3, nightSpawnGap: 4.5, nightPlayerSpeed: .78, nightDmg: 34,
+};
+const POWERUPS = {
+  ammo:   { label: 'Full Ammo',     color: 0x58c36a },
+  insta:  { label: 'Instant Kill',  color: 0xd8d8d8 },
+  double: { label: 'Double Points', color: 0xe4a437 },
+  bomb:   { label: 'Blast',         color: 0xd9552e },
+  repair: { label: 'Carpenter',     color: 0x5a9bd8 },
+};
+
+/* =====================================================================
+   2. MAP DATA — Blockhouse v0.2 (metres; +x east, +z south, +y up)
+      Ground: Start Room 16x13, Storage 10x13. Upper: Radio Room over x 8..26.
+   ===================================================================== */
+const UP = 3.6; // upper floor height
+const WINDOWS = [
+  { id: 'N1', wall: 'gN', ax: 'x', cx: 4,    cz: -.2,  ox: 0,  oz: -1, lvl: 0 },
+  { id: 'N2', wall: 'gN', ax: 'x', cx: 11,   cz: -.2,  ox: 0,  oz: -1, lvl: 0 },
+  { id: 'W1', wall: 'gW', ax: 'z', cx: -.2,  cz: 6.5,  ox: -1, oz: 0,  lvl: 0 },
+  { id: 'S1', wall: 'gS', ax: 'x', cx: 6,    cz: 13.2, ox: 0,  oz: 1,  lvl: 0 },
+  { id: 'E1', wall: 'gE', ax: 'z', cx: 26.2, cz: 4,    ox: 1,  oz: 0,  lvl: 0, gated: true },
+  { id: 'HE',  wall: 'hE', ax: 'z', cx: 43.8, cz: -15,   ox: 1, oz: 0,  lvl: 0 },   // Flugleitung
+  { id: 'FU',  wall: 'fUE', ax: 'z', cx: 43.8, cz: -11,  ox: 1, oz: 0,  lvl: 1, route: [[45, 0, -11], [45, UP, -11]] },   // Flugleitung, upper east window
+  { id: 'CB', climbOnly: true, ax: 'z', cx: 44, cz: -14, ox: 1, oz: 0, lvl: 2, route: [[45, 0, -14], [45, 7.1, -14], [36.4, 7.1, -14], [33.6, 6.9, -13.9]] },   // into the control cab over the roof
+  { id: 'HN',  wall: 'hN', ax: 'x', cx: 37,   cz: -23.8, ox: 0, oz: -1, lvl: 0 },
+  { id: 'AE',  wall: 'aE', ax: 'z', cx: 53.8, cz: 17,    ox: 1, oz: 0,  lvl: 0 },   // Annex Lab
+  { id: 'AS1', wall: 'aS', ax: 'x', cx: 42,   cz: 24.8,  ox: 0, oz: 1,  lvl: 0 },
+  { id: 'AS2', wall: 'aS', ax: 'x', cx: 50,   cz: 24.8,  ox: 0, oz: 1,  lvl: 0 },
+  { id: 'S2', wall: 'gS', ax: 'x', cx: 21,   cz: 13.2, ox: 0,  oz: 1,  lvl: 0, gated: true },
+  { id: 'RW', climbOnly: true, ax: 'z', cx: -.2, cz: 9,    ox: -1, oz: 0, lvl: 1, gated: true, route: [[-1, 0, 9], [-1, UP + .3, 9], [1, UP, 9]] },
+  { id: 'RS', climbOnly: true, ax: 'x', cx: 3,   cz: 13.2, ox: 0,  oz: 1, lvl: 1, gated: true, route: [[3, 0, 14.4], [3, UP + .3, 14.4], [3, UP, 12]] },
+  { id: 'UN1',wall: 'uN', ax: 'x', cx: 10.5, cz: -.2,  ox: 0,  oz: -1, lvl: 1, gated: true, route: [[9, 0, -2.1], [9, UP, -2.1], [10.5, UP, -1.15]] },
+  { id: 'UN2',wall: 'uN', ax: 'x', cx: 16.9, cz: -.2,  ox: 0,  oz: -1, lvl: 1, gated: true, route: [[17.7, 0, -2.1], [17.7, UP, -2.1], [16.9, UP, -1.15]] },
+  { id: 'US', wall: 'uS', ax: 'x', cx: 20,   cz: 13.2, ox: 0,  oz: 1,  lvl: 1, gated: true, route: [[18.8, 0, 15.2], [18.8, UP, 15.2], [20, UP, 14.15]] },
+];
+// Nav graph (hand-placed). gate = edge only opens after that purchase.
+const NODES = [
+  ['s1', 4, 0, 2.5], ['s2', 11, 0, 2.5], ['s3', 2, 0, 6.5], ['s4', 6, 0, 11], ['s5', 8, 0, 9], ['s6', 12, 0, 7], ['s7', 13, 0, 11.8],
+  ['dW', 14.8, 0, 11.8], ['dE', 17.2, 0, 11.8], ['fb', 15, 0, 2.9], ['ft', 15, UP, 10.9],
+  ['g1', 18, 0, 6], ['g2', 21, 0, 10.8], ['g3', 24, 0, 4], ['bb', 17.2, 0, .8], ['bt', 24.6, UP, 1.1],
+  ['u1', 10, UP, 7], ['u2', 10.5, UP, 2.2], ['u3', 16.9, UP, 2.5], ['u4', 20, UP, 11.2], ['u5', 12, UP, 11.2], ['u6', 22, UP, 6.2], ['di', 7.5, 0, 1.2], ['do', 7.5, 0, -1.6], ['t1', 7.5, 0, -8], ['t2', -4, 0, -12], ['t3', -6, 0, -27], ['t4', 2, 0, -34], ['t5', 16, 0, -34], ['t6', 24, 0, -27], ['t7', 22, 0, -14], ['t8', 12, 0, -16], ['t9', 2, 0, -16],
+  ['dg', -12.5, 0, -12], ['dp1', -16, 0, -12], ['dp2', -20, 0, -12], ['dp3', -30.5, 0, -12], ['dp4', -20, 0, -19.5], ['dp5', -24, 0, -20.6], ['dp6', -30.5, 0, -20],
+  ['ty1', -24, 0, -23.4], ['ty2', -20, 0, -25], ['tp', -17.5, 0, -36], ['dp7', -30.5, 0, -5.5],
+  ['n1', -11, 0, -44], ['n2', -11, 0, -58], ['n3', 8, 0, -57], ['n4', 24, 0, -58], ['n5', 24, 0, -44], ['n6', 8, 0, -43], ['pl0', 20.5, 0, -50], ['pl1', 15, .3, -50], ['pl2', 8, .3, -50], 
+  ['cp1', -20.6, 0, -33.5], ['cp2', -24.6, 0, -33.5], ['cp3', -30, 0, -33.5], ['as1', 32.4, 0, -9], ['as2', 38.6, -3.6, -9], ['bs', 41.8, -3.6, -10.4], ['cd', 42.7, -3.6, -9], ['la1', 45, -3.6, -9], ['la2', 52.8, -3.6, -9], ['lc', 52.8, -3.6, 16], ['ax1', 52.8, 0, 23.75], ['ax0', 51, 0, 23.8],
+  ['hd0', 28.5, 0, -15], ['h1', 32, 0, -15], ['h2', 37, 0, -15.5], ['h3', 33.5, 0, -12.8], ['fs0', 32, 0, -7.2], ['fs1', 40, UP, -7.2], ['f1', 40, UP, -12], ['f2', 34, UP, -15], ['f3', 41.5, UP, -17.5], ['fc0', 35.05, UP, -15.05], ['fc1', 33.9, 6.9, -15.05], ['fc2', 32.5, 6.9, -15.2], ['h4', 38.2, 0, -11], ['h6', 41, 0, -9.2],
+  ['tn0', 25.2, 0, 12], ['tn1', 27.6, 0, 12], ['tn2', 37, 0, 12], ['a1', 40.5, 0, 12], ['a2', 46, 0, 13.5], ['a3', 51, 0, 13.5], ['a4', 46, 0, 21], ['a5', 41.2, 0, 20.6], ['a6', 50.6, 0, 20],
+  ['u7', 17.2, UP, 7], ['u8', 23.4, UP, 3.1], ['u9', 13, UP, 8.2], ['rd', 6, UP, 3], ['r1', 3.6, UP, 3], ['r2', 2.8, UP, 7.4], ['r3', 2, UP, 10.8], ['u10', 7, UP, 6.5], ['hd', 22, UP, 4.3], ['u11', 20, UP, 2.9], ['u12', 20, UP, 6.2],
+].map(n => ({ id: n[0], x: n[1], y: n[2], z: n[3] }));
+const EDGES = [
+  ['s1','di'],['s2','di'],['di','do','blast'],['do','t1'],['t1','t9'],['t1','t8'],['t1','t2'],['t1','t7'],['t2','t9'],['t2','t3'],['t9','t3'],['t3','t4'],['t4','t5'],['t5','t6'],['t6','t7'],['t7','t8'],['t8','t9'],['t8','t6'],
+  ['t2','dg'],['dg','dp1','depot'],['dp1','dp2'],['dp2','dp3'],['dp2','dp4'],['dp4','dp5'],['dp3','dp6'],['dp6','dp5'],['dp5','ty1','tower'],['ty1','ty2'],['ty2','tp'],['dp3','dp7'],
+  ['t4','n6'],['t5','n6'],['t3','n1'],['n1','n6'],['n1','n2'],['n2','n3'],['n3','n4'],['n4','n5'],['n5','n6'],['n5','t6'],['n5','t5'],['n5','pl0'],['n4','pl0'],['pl0','pl1'],
+  ['ty2','cp1'],['cp1','cp2'],['cp2','cp3'],['as1','h1'],['as1','fs0'],['as1','as2'],['as2','bs'],['as2','cd'],['bs','cd'],['cd','la1','mains'],['la1','la2'],['la2','lc'],['lc','ax1'],['ax1','ax0'],['ax0','a6'],['ax0','a4'],['pl1','pl2'],
+  ['t7','hd0'],['t6','hd0'],['hd0','h1','flug'],['h1','fs0'],['fs0','fs1'],['fs1','f1'],['f1','f2'],['f1','f3'],['f2','f3'],['f2','fc0'],['f1','fc0'],['fc0','fc1'],['fc1','fc2'],['h1','h2'],['h2','h3'],['h2','h4'],['h4','h6'],
+  ['g2','tn0'],['dE','tn0'],['tn0','tn1','mains'],['tn1','tn2'],['tn2','a1'],['a1','a2'],['a2','a3'],['a2','a4'],['a1','a5'],['a5','a4'],['a4','a6'],['a3','a6'],
+  ['s1','s2'],['s1','s3'],['s1','s5'],['s3','s4'],['s3','s5'],['s4','s5'],['s5','s6'],['s2','s6'],['s5','s7'],['s4','s7'],['s6','s7'],
+  ['s7','dW'],['dW','dE','doorA'],['s2','fb'],['fb','ft','debris'],
+  ['dE','g1'],['dE','g2'],['g1','g2'],['g1','g3'],['g2','g3'],['g1','bb'],['bb','bt'],
+  ['bt','u8'],['u8','hd'],['hd','u6'],['u3','u11'],['u11','u12'],['u12','u6'],['u12','u4'],['rd','u10'],['u10','u1'],['ft','u5'],['ft','u4'],['u2','u1'],['u2','u3'],['u1','u9'],['u9','u5'],['rd','r1'],['r1','r2'],['r2','r3'],['rd','u2'],['rd','u1'],['u5','u4'],['u4','u6'],['u7','u3'],['u7','u4'],
+];
+const WALLBUYS = [
+  { id: 'kar98k',   x: 11,    y: 1.5,      z: 12.98, nx: 0,  nz: -1 },
+  { id: 'mp40',     x: 25.98, y: 1.5,      z: 7,     nx: -1, nz: 0 },
+  { id: 'thompson', x: 12,    y: UP + 1.5, z: 12.98, nx: 0,  nz: -1 },
+  { id: 'trench',   x: 25.98, y: UP + 1.5, z: 8,     nx: -1, nz: 0 },
+  { id: 'mg42',     x: 13.6,  y: 1.8,      z: -51.58, nx: 0, nz: 1 },    // inside the Me 323 hold
+  { id: 'ppsh',     x: -18.5, y: 1.5,      z: -6.02, nx: 0,  nz: -1 },   // fuel depot pump house
+  { id: 'stg44',    x: 29.98, y: 1.5,      z: -9,    nx: -1, nz: 0 },   // airfield: on the Flugleitung's west wall
+];
+
+/* =====================================================================
+   3. RENDERER + MATERIALS
+   ===================================================================== */
+const canvas = $('view');
+let renderer;
+try { renderer = new T.WebGLRenderer({ canvas, antialias: true }); }
+catch (e) { $('o-text').textContent = 'This browser could not start WebGL, so the game cannot run here.'; $('deploy').hidden = true; return; }
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+renderer.autoClear = false;
+{ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), im = g.createImageData(128, 128); for (let i = 0; i < im.data.length; i += 4) { const v = rand() * 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; } g.putImageData(im, 0, 0); $('grain').style.backgroundImage = `url(${c.toDataURL()})`; }
+const scene = new T.Scene();
+const FOG_DAY = new T.Color(0x18212c), FOG_NIGHT = new T.Color(0x05070a);
+scene.fog = new T.FogExp2(FOG_DAY.getHex(), .03);
+scene.background = FOG_DAY.clone();
+const camera = new T.PerspectiveCamera(75, 1, .05, 120);
+camera.rotation.order = 'YXZ';
+scene.add(camera);
+const vmScene = new T.Scene(), vmCam = new T.PerspectiveCamera(50, 1, .01, 10);
+vmScene.add(new T.HemisphereLight(0xcfd8e0, 0x30343a, 1.1));
+const vmSun = new T.DirectionalLight(0xffe2b0, .7); vmSun.position.set(.5, 1, .6); vmScene.add(vmSun);
+
+function makeTex(base, vary, lines) {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 3000; i++) { const v = rand() < .5 ? 0 : 255; g.fillStyle = `rgba(${v},${v},${v},${rand() * vary})`; g.fillRect(rand() * 256, rand() * 256, 1 + rand() * 3, 1 + rand() * 3); }
+  if (lines) { g.strokeStyle = 'rgba(0,0,0,.25)'; for (let y = 0; y < 256; y += lines) { g.beginPath(); g.moveTo(0, y + .5); g.lineTo(256, y + .5); g.stroke(); } }
+  for (let i = 0; i < 7; i++) { const x = rand() * 256, gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, 'rgba(0,0,0,.2)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x, 0, 3 + rand() * 12, 100 + rand() * 150); }
+  const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; return t;
+}
+const M = {
+  wall:  new T.MeshLambertMaterial({ map: makeTex('#8a8d88', .09, 32) }),   // board-formed concrete
+  floor: new T.MeshLambertMaterial({ map: makeTex('#5c5f5e', .12, 0) }),
+  slab:  new T.MeshLambertMaterial({ map: makeTex('#73767a', .08, 0) }),
+  wood:  new T.MeshLambertMaterial({ map: makeTex('#6b4a2c', .14, 16) }),
+  steel: new T.MeshLambertMaterial({ color: 0x3d474f }),
+  snow:  new T.MeshLambertMaterial({ map: makeTex('#b9c4cf', .06, 0) }),
+  dark:  new T.MeshLambertMaterial({ color: 0x23282c }),
+};
+function boxGeo(w, h, d, tile) {
+  const g = new T.BoxGeometry(w, h, d), uv = g.attributes.uv, dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+  for (let f = 0; f < 6; f++) for (let i = 0; i < 4; i++) { const k = f * 4 + i; uv.setXY(k, uv.getX(k) * dims[f][0] / tile, uv.getY(k) * dims[f][1] / tile); }
+  return g;
+}
+
+/* =====================================================================
+   4. WORLD BUILD — every solid is an axis-aligned box that is both
+      collider and walkable surface (stairs are just stacked boxes).
+      flags: p = blocks player, a = blocks AI, s = stops bullets
+   ===================================================================== */
+const boxes = [];
+function addBox(x0, x1, y0, y1, z0, z1, mat, o) {
+  o = o || {};
+  const b = { x0, x1, y0, y1, z0, z1, p: o.p !== false, a: o.a !== false, s: o.s !== false, off: false, mesh: null };
+  if (mat) { b.mesh = new T.Mesh(boxGeo(x1 - x0, y1 - y0, z1 - z0, 2), mat); b.mesh.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); scene.add(b.mesh); }
+  boxes.push(b); return b;
+}
+// wall running along `axis` from a..b, occupying p0..p1 on the other axis, with openings
+function wall(axis, p0, p1, a, b, y0, y1, ops, mat) {
+  const seg = (u0, u1, ya, yb) => { if (u1 - u0 < .01 || yb - ya < .01) return; axis === 'x' ? addBox(u0, u1, ya, yb, p0, p1, mat) : addBox(p0, p1, ya, yb, u0, u1, mat); };
+  let cur = a;
+  ops.slice().sort((m, n) => m.at - n.at).forEach(o => { seg(cur, o.at - o.w / 2, y0, y1); seg(o.at - o.w / 2, o.at + o.w / 2, y0, o.y0); seg(o.at - o.w / 2, o.at + o.w / 2, o.y1, y1); cur = o.at + o.w / 2; });
+  seg(cur, b, y0, y1);
+}
+const winOps = id => WINDOWS.filter(w => w.wall === id && !w.climbOnly).map(w => ({ at: w.ax === 'x' ? w.cx : w.cz, w: 1.6, y0: w.lvl * UP + 1.0, y1: w.lvl * UP + 2.3 }));
+
+// ground + exterior
+{ const HOLES = [[52, 53.6, 18.2, 23], [33, 37.8, -9.8, -8.2]];   // stairwell openings: annex lab, ATC building
+  const xs = [-120, 120], zs = [-120, 120]; HOLES.forEach(h => { xs.push(h[0], h[1]); zs.push(h[2], h[3]); }); xs.sort((a, b) => a - b); zs.sort((a, b) => a - b);
+  const inHole = (x, z) => HOLES.some(h => x > h[0] && x < h[1] && z > h[2] && z < h[3]);
+  for (let i = 0; i < xs.length - 1; i++) { if (xs[i + 1] - xs[i] < .01) continue; let z0 = null;
+    for (let k = 0; k < zs.length - 1; k++) { const solid = !inHole((xs[i] + xs[i + 1]) / 2, (zs[k] + zs[k + 1]) / 2);
+      if (solid && z0 === null) z0 = zs[k]; if (z0 !== null && (!solid || k === zs.length - 2)) { const z1 = solid ? zs[k + 1] : zs[k]; if (z1 - z0 > .01) addBox(xs[i], xs[i + 1], -1, 0, z0, z1, M.snow); z0 = null; } } } }
+{ const f = new T.Mesh(new T.PlaneGeometry(26, 13), M.floor); f.geometry.attributes.uv.array.forEach((v, i, a) => a[i] = v * (i % 2 ? 6.5 : 13)); f.rotation.x = -Math.PI / 2; f.position.set(13, .01, 6.5); scene.add(f); }
+// outer walls, ground storey
+wall('x', -.4, 0, -.4, 26.4, 0, UP, winOps('gN').concat([{ at: 7.5, w: 1.3, y0: 0, y1: 2.2 }]), M.wall);
+wall('x', 13, 13.4, -.4, 26.4, 0, UP, winOps('gS'), M.wall);
+wall('z', -.4, 0, 0, 13, 0, UP, winOps('gW'), M.wall);
+wall('z', 26, 26.4, 0, 13, 0, UP, winOps('gE').concat([{ at: 12, w: 1.2, y0: 0, y1: 2.2 }]), M.wall);
+// divider with Door A
+wall('z', 15.8, 16.2, 0, 13, 0, 3.3, [{ at: 11.8, w: 1.6, y0: 0, y1: 2.2 }], M.wall);
+// upper storey
+wall('x', -.4, 0, 4.6, 26.4, UP, 7.7, winOps('uN'), M.wall);
+wall('x', 13, 13.4, 4.6, 26.4, UP, 7.7, winOps('uS'), M.wall);
+wall('z', 4.6, 5, 0, 13, UP, 7.7, [{ at: 3, w: 1.3, y0: UP, y1: UP + 2.2 }], M.wall);
+wall('z', 26, 26.4, 0, 13, UP, 7.7, [], M.wall);
+addBox(4.6, 26.4, 7.4, 7.7, -.4, 13.4, M.slab);
+// first-floor slab with two stairwell holes (A: x14.2-15.8 z4-10, B: x18-24 z0-1.6)
+[[0, 14.2, 0, 13], [14.2, 15.8, 0, 4], [14.2, 15.8, 10, 13], [15.8, 18, 0, 13], [18, 23.04, 2, 13], [23.04, 26, 0, 13]].forEach(r => addBox(r[0], r[1], 3.3, UP, r[2], r[3], M.slab));
+// ledges the dead climb onto (outside, visual only)
+addBox(8, 18.6, 3.3, UP, -1.7, -.4, M.slab, { p: false, a: false });
+// west-wing rooftop: walk out through the door in the Radio Room's west wall. Low parapet + invisible blockers keep the player on it.
+[[-.4, 0, -.4, 13.4], [0, 4.6, -.4, 0], [0, 4.6, 13, 13.4]].forEach(r => { addBox(r[0], r[1], UP, UP + .55, r[2], r[3], M.wall); addBox(r[0], r[1], UP + .55, 7.7, r[2], r[3], null, { a: false, s: false }); });
+{ const f = new T.Mesh(new T.PlaneGeometry(4.6, 13), M.snow); f.geometry.attributes.uv.array.forEach((v, i, a) => a[i] = v * (i % 2 ? 6.5 : 2.3)); f.rotation.x = -Math.PI / 2; f.position.set(2.3, UP + .012, 6.5); scene.add(f); }
+addBox(.4, 1.4, UP, UP + .9, 4.4, 5.6, M.wall); addBox(3, 4.2, UP, UP + .7, .5, 1.5, M.wood);   // vent block, crate
+// Radio Room interior, Nacht-style: partitions, columns, a ceiling collapse
+addBox(18.9, 19.1, UP, 7.4, 3.5, 8.5, M.wall);                 // east partition
+addBox(5, 11.5, UP, 7.4, 8.9, 9.1, M.wall);                    // radio nook wall
+addBox(12.3, 12.7, UP, 7.4, 5, 5.4, M.wall); addBox(21.8, 22.2, UP, 7.4, 9, 9.4, M.wall);
+// HOLD POINT — the stair landing (NE corner). Back to two solid walls; the only ways in are the back stairs and one doorway.
+wall('x', 5, 5.2, 21, 26, UP, 7.4, [{ at: 22, w: 1.3, y0: UP, y1: UP + 2.2 }], M.wall);
+addBox(20.9, 21.1, UP, 7.4, 2, 5.2, M.wall);
+addBox(23.5, 25.3, UP, UP + .5, 5.5, 7.3, M.wall); addBox(24.1, 25.6, UP + .5, UP + 1.1, 5.7, 6.9, M.wall); addBox(24.8, 25.8, UP + 1.1, UP + 1.6, 5.9, 6.6, M.slab); // rubble
+addBox(16.3, 17.5, UP, UP + 1, 11.9, 12.9, M.wood); addBox(16.5, 17.2, UP + 1, UP + 1.6, 12.1, 12.8, M.wood, { p: false, a: false });
+[[22.6, 5.6, 6.4, .5, .9], [21.4, 5.2, 7.2, -.7, .3], [9.6, 5.9, 4.2, .35, -.2]].forEach(b => { const m = new T.Mesh(boxGeo(.22, .22, 4.2, 1), M.wood); m.position.set(b[0], b[1], b[2]); m.rotation.set(b[3], b[4], .2); scene.add(m); }); // fallen beams
+addBox(18.2, 21.8, 3.3, UP, 13.4, 14.8, M.slab, { p: false, a: false });
+// front stairs (Start Room, beside the divider) going north, 12 risers
+for (let i = 0; i < 12; i++) addBox(14.2, 15.8, 0, (i + 1) * .3, 4 + i * .5, 4 + (i + 1) * .5, M.slab);   // foot at the north end, climbing south
+addBox(14, 14.2, 0, UP, 4, 10.6, M.wall);
+// back stairs (Storage, along the north wall) going east
+for (let i = 0; i < 12; i++) addBox(18 + i * .42, 18 + (i + 1) * .42, 0, (i + 1) * .3, 0, 2, M.slab);
+addBox(18, 23.04, 0, UP, 2, 2.2, M.wall);
+// props
+addBox(7, 9, 0, .9, 6, 7, M.wood);                    // map table
+addBox(.1, .7, 0, 1.9, 10.4, 12.4, M.steel);          // lockers
+addBox(13, 14, 0, .8, .3, 1.3, M.wood);
+addBox(23.6, 25.4, 0, 1, 8.6, 10, M.wood); addBox(24.3, 25.5, 0, .7, 10, 11.2, M.wood);
+addBox(5.3, 6.3, UP, UP + .9, 10.4, 12.4, M.wood);    // radio desk
+addBox(5.5, 6.1, UP + .9, UP + 1.3, 10.9, 11.7, M.dark, { p: false, a: false });
+// emergency generator (Storage, south wall): the building's lights are dead until someone starts it
+addBox(22.6, 24, 0, 1, 12.3, 12.9, M.dark); addBox(22.8, 23.3, 1, 1.25, 12.4, 12.8, M.steel, { p: false, a: false });
+// purchasable blockers
+const doorA = addBox(15.85, 16.15, 0, 2.2, 11, 12.6, M.steel);
+const blastDoor = addBox(6.85, 8.15, 0, 2.2, -.4, 0, M.steel);   // north blast door to the airfield, opened with the built crank
+const debris = addBox(14.2, 15.8, 0, 2, 3.3, 4, null);
+const debrisGroup = new T.Group(); scene.add(debrisGroup);
+for (let i = 0; i < 9; i++) { const m = new T.Mesh(boxGeo(.5 + rand() * .9, .25 + rand() * .4, .3 + rand() * .4, 2), i % 3 ? M.wall : M.wood); m.position.set(14.5 + rand() * 1, .2 + i * .2, 3.5 + rand() * .3); m.rotation.set(rand() - .5, rand() * 3, rand() - .5); debrisGroup.add(m); }
+// windows: barrier collider + boards
+WINDOWS.forEach(w => {
+  const y0 = w.lvl * UP + 1, y1 = w.lvl * UP + 2.3;
+  w.y = w.lvl * UP;
+  if (w.climbOnly) { const l = w.route[w.route.length - 1]; w.out = w.inn = { x: l[0], y: l[1], z: l[2] }; w.boards = CFG.boards; w.meshes = []; return; }
+  w.barrier = w.ax === 'x' ? addBox(w.cx - .8, w.cx + .8, y0, y1, w.cz - .2, w.cz + .2, null, { s: false }) : addBox(w.cx - .2, w.cx + .2, y0, y1, w.cz - .8, w.cz + .8, null, { s: false });
+  w.out = { x: w.cx + w.ox * .95, y: w.y, z: w.cz + w.oz * .95 };
+  w.inn = { x: w.cx - w.ox * 1.0, y: w.y, z: w.cz - w.oz * 1.0 };
+  if (!w.route) w.route = [[w.out.x, 0, w.out.z]]; else { const l = w.route[w.route.length - 1]; w.out = { x: l[0], y: l[1], z: l[2] }; }
+  w.boards = CFG.boards; w.meshes = [];
+  for (let i = 0; i < CFG.boards; i++) {
+    const m = new T.Mesh(w.ax === 'x' ? boxGeo(1.85, .17, .05, 1) : boxGeo(.05, .17, 1.85, 1), M.wood);
+    m.position.set(w.cx - w.ox * .24, y0 + .14 + i * .255, w.cz - w.oz * .24);
+    if (w.ax === 'x') m.rotation.z = (rand() - .5) * .14; else m.rotation.x = (rand() - .5) * .14;
+    scene.add(m); w.meshes.push(m);
+  }
+});
+function setBoards(w, n) { w.boards = clamp(n, 0, CFG.boards); w.meshes.forEach((m, i) => m.visible = i < w.boards); }
+// chalk wall-buy signs
+WALLBUYS.forEach(b => {
+  const d = WEAPONS[b.id], c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d');
+  g.strokeStyle = g.fillStyle = 'rgba(245,243,232,.92)'; g.lineWidth = 5; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(40, 96); g.lineTo(380, 84); g.lineTo(470, 90); g.lineTo(470, 106); g.lineTo(300, 112); g.lineTo(285, 150); g.lineTo(255, 150); g.lineTo(250, 116); g.lineTo(120, 122); g.lineTo(60, 150); g.lineTo(36, 140); g.closePath(); g.stroke();
+  g.font = 'italic bold 44px Impact, "Arial Narrow", sans-serif'; g.textAlign = 'center'; g.fillText(d.name.toUpperCase(), 256, 54);
+  g.font = 'bold 56px Impact, "Arial Narrow", sans-serif'; g.fillText(String(d.cost), 256, 226);
+  const m = new T.Mesh(new T.PlaneGeometry(1.7, .85), new T.MeshBasicMaterial({ map: new T.CanvasTexture(c), transparent: true, fog: true }));
+  m.position.set(b.x, b.y, b.z); m.rotation.y = b.nz < 0 ? Math.PI : b.nz > 0 ? 0 : b.nx < 0 ? -Math.PI / 2 : Math.PI / 2; scene.add(m);
+});
+// the 935 crate (random weapon box) in the Radio Room
+const crate = { x: 0, y: UP, z: 0, ix: 0, iz: 0, spot: 0, uses: 0, state: 'idle', t: 0, pick: null };
+const crateGlow = new T.Mesh(new T.BoxGeometry(1, .06, 1), new T.MeshBasicMaterial({ color: 0x9fd8ff })); crateGlow.visible = false; scene.add(crateGlow);
+const crateLid = new T.Mesh(new T.BoxGeometry(1, .05, 1), M.steel); scene.add(crateLid);
+const CRATE_SPOTS = [{ x0: 23.6, x1: 25.6, z0: 4.1, z1: 5, ix: 24.6, iz: 3.3, y: UP }, { x0: 22, x1: 24, z0: 11.8, z1: 12.7, ix: 23, iz: 11.2, y: UP }, { x0: 40, x1: 42, z0: -7.3, z1: -6.4, ix: 41, iz: -8.2, y: 0, needs: 'flug' }].map(sp => { sp.box = addBox(sp.x0, sp.x1, sp.y, sp.y + .7, sp.z0, sp.z1, M.wood); return sp; });
+function setCrateSpot(i) {
+  crate.spot = i; crate.uses = 0; CRATE_SPOTS.forEach((sp, k) => { sp.box.off = k !== i; sp.box.mesh.visible = k === i; });
+  const sp = CRATE_SPOTS[i]; crate.x = (sp.x0 + sp.x1) / 2; crate.z = (sp.z0 + sp.z1) / 2; crate.y = sp.y; crate.ix = sp.ix; crate.iz = sp.iz;
+  crateGlow.position.set(crate.x, sp.y + .76, crate.z); crateGlow.scale.set(sp.x1 - sp.x0 - .1, 1, sp.z1 - sp.z0 - .1);
+  crateLid.position.set(crate.x, sp.y + .72, crate.z); crateLid.scale.set(sp.x1 - sp.x0 - .16, 1, sp.z1 - sp.z0 - .16);
+}
+function nextCrateSpot() { let i = crate.spot; for (let k = 0; k < CRATE_SPOTS.length; k++) { i = (i + 1) % CRATE_SPOTS.length; if (!CRATE_SPOTS[i].needs || G.open[CRATE_SPOTS[i].needs]) return i; } return crate.spot; }
+function crateDone() { crate.state = 'idle'; crateGlow.visible = false; if (crate.uses >= 4) { setCrateSpot(nextCrateSpot()); banner('The crate has moved', 'It is somewhere else on the base now.', 3); } }
+// Ju 52/3m wreck, belly-landed, at true size: 18.9 m long, 29.25 m span. The fuselage blocks; the low wings lie on the ground and can be walked over.
+{ const hull = new T.MeshLambertMaterial({ map: makeTex('#69737c', .05, 8) }), g = new T.Group();   // corrugated duralumin skin
+  const fus = new T.Mesh(new T.CylinderGeometry(.95, .55, 18.9, 12), hull); fus.rotation.z = Math.PI / 2; fus.position.y = .95; g.add(fus);
+  const wing = new T.Mesh(new T.BoxGeometry(4.6, .45, 29.25), hull); wing.position.set(-2, .23, 0); g.add(wing);
+  const fin = new T.Mesh(new T.BoxGeometry(2.4, 2.7, .18), hull); fin.position.set(8.1, 2.5, 0); g.add(fin);
+  const tp = new T.Mesh(new T.BoxGeometry(1.8, .12, 5.6), hull); tp.position.set(8.1, 1.45, 0); g.add(tp);
+  const cab = new T.Mesh(new T.BoxGeometry(1.7, .55, 1.3), M.dark); cab.position.set(-6, 1.95, 0); g.add(cab);
+  [[-9.9, .95, 0], [-4.4, .7, 3.2], [-4.4, .7, -3.2]].forEach(e => { const m = new T.Mesh(new T.CylinderGeometry(.69, .69, 1.4, 12), M.dark); m.rotation.z = Math.PI / 2; m.position.set(e[0], e[1], e[2]); g.add(m); });   // three BMW 132 radials
+  { const c = document.createElement('canvas'); c.width = c.height = 128; const k = c.getContext('2d'); k.fillStyle = '#e8e6df'; k.fillRect(44, 8, 40, 112); k.fillRect(8, 44, 112, 40); k.fillStyle = '#111'; k.fillRect(52, 16, 24, 96); k.fillRect(16, 52, 96, 24);
+    const bk = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshLambertMaterial({ map: new T.CanvasTexture(c), transparent: true })); bk.position.set(3, 1.05, .8); g.add(bk); }
+  g.position.set(9, 0, -27); scene.add(g);
+  addBox(-.4, 18.4, 0, 1.9, -27.95, -26.05, null); addBox(4.7, 9.3, 0, .45, -41.6, -12.4, null); }
+// ---- AIRFIELD (zone 2, behind the blast door): fenced tarmac x -14..30, z -40..-0.4 ----
+function makeCamo(lines) {   // late-war splinter scheme: dark green / grey-green / black-green
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); g.fillStyle = '#4b5247'; g.fillRect(0, 0, 256, 256);
+  const cols = ['#394033', '#5c5d4c', '#2e342e'];
+  for (let i = 0; i < 9; i++) { g.fillStyle = cols[i % 3]; const x = rand() * 256, y = rand() * 256; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 4; k++) g.lineTo(x + (rand() - .5) * 220, y + (rand() - .5) * 220); g.closePath(); g.fill(); }
+  for (let i = 0; i < 1800; i++) { const v = rand() < .5 ? 0 : 255; g.fillStyle = `rgba(${v},${v},${v},${rand() * .07})`; g.fillRect(rand() * 256, rand() * 256, 2, 2); }
+  if (lines) { g.strokeStyle = 'rgba(0,0,0,.28)'; for (let x = 0; x < 256; x += lines) { g.beginPath(); g.moveTo(x + .5, 0); g.lineTo(x + .5, 256); g.stroke(); } }
+  const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; return t;
+}
+const HANGAR = new T.MeshLambertMaterial({ map: makeCamo(16) }), CAMO = new T.MeshLambertMaterial({ map: makeCamo(0) }), FENCE = new T.MeshLambertMaterial({ color: 0x1b1d1f });
+function fence(x0, z0, x1, z1, open) {   // open = map boundary only, nothing built there (a runway has no wire across it)
+  addBox(Math.min(x0, x1) - .06, Math.max(x0, x1) + .06, 0, 6, Math.min(z0, z1) - .06, Math.max(z0, z1) + .06, null, { s: false });
+  if (open) return;
+  const len = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(len / 4)), pts = [];
+  for (let i = 0; i <= n; i++) { const x = lerp(x0, x1, i / n), z = lerp(z0, z1, i / n), m = new T.Mesh(new T.CylinderGeometry(.05, .06, 2.5, 5), FENCE); m.position.set(x, 1.25, z); scene.add(m); }
+  [.5, 1.1, 1.7, 2.3].forEach(h => pts.push(new T.Vector3(x0, h, z0), new T.Vector3(x1, h, z1)));
+  scene.add(new T.LineSegments(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x59606a })));
+}
+fence(-14, -.4, -.4, -.4); fence(26.4, -.4, 30, -.4); fence(30, -.4, 30, -6); fence(30, -24, 30, -64, true); fence(-14, -64, 30, -64, true); fence(-14, -64, -14, -40, true); fence(-14, -40, -14, -13.2); fence(-14, -10.8, -14, -.4);
+fence(-34, -40, -34, -2); fence(-34, -2, -14, -2); fence(-34, -40, -14, -40); fence(-34, -22, -25.2, -22); fence(-22.8, -22, -14, -22);   // west yards
+const flatFloor = (x0, x1, z0, z1, mat) => { const f = new T.Mesh(new T.PlaneGeometry(x1 - x0, z1 - z0), mat); f.rotation.x = -Math.PI / 2; f.position.set((x0 + x1) / 2, .015, (z0 + z1) / 2); scene.add(f); };
+// ---- FUEL DEPOT (zone 3): west of the airfield, behind a gate ----
+const depotGate = addBox(-14.12, -13.88, 0, 2.6, -13.2, -10.8, M.steel);
+[[-25, -8], [-25, -16]].forEach(t => { const m = new T.Mesh(new T.CylinderGeometry(3, 3, 4.2, 16), new T.MeshLambertMaterial({ color: 0x3f4a3c })); m.position.set(t[0], 2.1, t[1]); scene.add(m); addBox(t[0] - 2.6, t[0] + 2.6, 0, 4.2, t[1] - 2.6, t[1] + 2.6, null); });
+addBox(-20, -17, 0, 2.6, -6, -3.5, M.wall);                                   // pump house (PPSh on its north face)
+// ---- SIGNALS YARD (zone 4): north-west yard with a timber barrack hut (Funkstelle) and a guyed aerial mast ----
+const towerGate = addBox(-25.2, -22.8, 0, 2.6, -22.12, -21.88, M.steel);
+const PUTZ = new T.MeshLambertMaterial({ map: makeTex('#8f8b7c', .07, 0) }), TILE = new T.MeshLambertMaterial({ map: makeTex('#5b3a2d', .12, 12) }), PLANK = new T.MeshLambertMaterial({ map: makeTex('#514a3b', .1, 24) });
+const vis = (geo, mat, x, y, z) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); scene.add(m); return m; };
+// pitched roof over a rectangle: ridge runs along x; returns nothing (visual only)
+function gableRoof(x0, x1, z0, z1, yEave, deg, mat, wallMat) {
+  const a = deg * Math.PI / 180, half = (z1 - z0) / 2 + .5, L = half / Math.cos(a), zc = (z0 + z1) / 2, rise = half * Math.tan(a);
+  vis(boxGeo(x1 - x0 + 1, .22, L, 2), mat, (x0 + x1) / 2, yEave + rise / 2, zc - half / 2).rotation.x = -a;
+  vis(boxGeo(x1 - x0 + 1, .22, L, 2), mat, (x0 + x1) / 2, yEave + rise / 2, zc + half / 2).rotation.x = a;
+  const gr = (z1 - z0) / 2 * Math.tan(a), n = 5;
+  [x0 + .15, x1 - .15].forEach(x => { for (let k = 0; k < n; k++) vis(boxGeo(.3, gr / n, (z1 - z0) * (1 - (k + .5) / n), 2), wallMat, x, yEave + gr * (k + .5) / n, zc); });
+}
+function paneWindow(x, y, z, nx, nz, w, h) { const t = nx ? [.08, h, w] : [w, h, .08], f = nx ? [.05, h + .16, w + .16] : [w + .16, h + .16, .05]; vis(new T.BoxGeometry(f[0], f[1], f[2]), M.wood, x, y, z); vis(new T.BoxGeometry(t[0], t[1], t[2]), M.dark, x + nx * .03, y, z + nz * .03); }
+// Gefechtsstand (command post) to Regelbau proportions: 12 x 11 m outside, 2 m reinforced-concrete walls and roof (Baustaerke B),
+// an 8 x 7 m room with 2.3 m headroom, a 2 m entrance passage, an observation slit through the south wall and an armoured cupola.
+addBox(-33.5, -31.5, 0, 2.3, -39.5, -28.5, CAMO);
+wall('z', -23.5, -21.5, -39.5, -28.5, 0, 2.3, [{ at: -33.5, w: 1, y0: 0, y1: 2 }], CAMO);
+addBox(-31.5, -23.5, 0, 2.3, -39.5, -37.5, CAMO);
+wall('x', -30.5, -28.5, -31.5, -23.5, 0, 2.3, [{ at: -27.5, w: 2.6, y0: 1.2, y1: 1.6 }], CAMO);
+addBox(-33.5, -21.5, 2.3, 4.3, -39.5, -28.5, CAMO);
+flatFloor(-31.5, -23.5, -37.5, -30.5, M.floor);
+addBox(-27.6, -25.6, 0, .9, -32.9, -31.4, M.wood);                                                   // map table
+vis(new T.SphereGeometry(.95, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), M.steel, -28.6, 4.3, -34); vis(new T.BoxGeometry(1.2, .1, .3), M.dark, -28.6, 4.75, -33.2);   // cupola + vision slit
+vis(new T.BoxGeometry(.14, 2, 1), M.steel, -21.1, 1, -34.45).rotation.y = .5;                         // armoured door, swung open
+[[-20.9, -31.4], [-20.9, -30.8], [-20.4, -31.1]].forEach((b, i) => vis(boxGeo(.5, .3, .35, 1), M.wood, b[0], .15 + (i === 2 ? .3 : 0), b[1]));
+stencil('GEFECHTSSTAND', '#e9e6da', -21.485, 3.1, -33.5, 1, 0, 2.6, .42);
+vis(new T.CylinderGeometry(.08, .12, 16, 6), FENCE, -17.5, 8, -29.5);
+{ const pts = []; [[-20.5, -26], [-15, -27], [-16, -34]].forEach(g => pts.push(new T.Vector3(-17.5, 15, -29.5), new T.Vector3(g[0], 0, g[1]))); scene.add(new T.LineSegments(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x59606a }))); }
+// ---- FLUGLEITUNG (zone 5): the airfield operations building. Two storeys, rendered brick, steep tiled roof.
+//      Ground floor: ops hall (teleporter, crate spot). Upstairs: watch room with the main power switch and a wide window over the strip.
+wall('z', 30, 30.4, -24, -6, 0, UP, [{ at: -15, w: 1.4, y0: 0, y1: 2.2 }], PUTZ);
+wall('z', 43.6, 44, -24, -6, 0, UP, winOps('hE'), PUTZ);
+wall('x', -24, -23.6, 30.4, 43.6, 0, UP, winOps('hN'), PUTZ);
+wall('x', -6.4, -6, 30.4, 43.6, 0, UP, [], PUTZ);
+wall('z', 30, 30.4, -24, -6, UP, 6.9, [{ at: -15, w: 6, y0: UP + 1, y1: UP + 2.2 }], PUTZ);     // watch-room window band (shoot out over the runway)
+wall('z', 43.6, 44, -24, -6, UP, 6.9, winOps('fUE'), PUTZ);
+wall('x', -24, -23.6, 30.4, 43.6, UP, 6.9, [], PUTZ);
+wall('x', -6.4, -6, 30.4, 43.6, UP, 6.9, [], PUTZ);
+[[30.4, 43.6, -23.6, -8], [30.4, 33, -8, -6.4], [39, 43.6, -8, -6.4]].forEach(r => addBox(r[0], r[1], 3.3, UP, r[2], r[3], M.slab));
+[[30, 34.5, -24, -6], [34.5, 35.6, -24, -15.6], [34.5, 35.6, -14.5, -6], [35.6, 44, -24, -6]].forEach(r => addBox(r[0], r[1], 6.6, 6.9, r[2], r[3], M.slab));   // watch-room ceiling / roof, with the cab ladder hatch flatFloor(30.4, 43.6, -23.6, -9.8, M.floor); flatFloor(30.4, 33, -9.8, -6.4, M.floor); flatFloor(37.8, 43.6, -9.8, -6.4, M.floor); flatFloor(33, 37.8, -8.2, -6.4, M.floor);
+for (let i = 0; i < 12; i++) addBox(33 + i * .5, 33.5 + i * .5, 0, (i + 1) * .3, -8, -6.4, M.wood);   // timber stair along the south wall
+addBox(33, 39, 0, UP, -8.2, -8, PUTZ);
+addBox(44, 45.6, 3.3, UP, -13, -9, M.slab, { p: false, a: false });                                 // ledge under the upper east window
+const flugDoor = addBox(30, 30.4, 0, 2.2, -15.7, -14.3, M.wood);
+addBox(34, 36, 0, 1.2, -20, -18, M.wood);
+addBox(36.5, 39.5, UP, UP + .9, -20.5, -19.3, M.wood);                                              // plotting table upstairs
+const switchLamp = new T.Mesh(new T.BoxGeometry(.12, .7, .5), new T.MeshBasicMaterial({ color: 0xbd2a20 })); switchLamp.rotation.y = Math.PI / 2; switchLamp.position.set(41.8, -2.3, -11.43); scene.add(switchLamp);
+// roof: parapet, glazed control cab (Kanzel) with a walk-round rail, signal mast with beacon, searchlight, loudspeakers
+const GLASS = new T.MeshLambertMaterial({ color: 0x9fb8c4, transparent: true, opacity: .32 });
+[[30, 44, -24, -23.7], [30, 44, -6.3, -6], [30, 30.3, -24, -6], [43.7, 44, -24, -6]].forEach(r => vis(boxGeo(r[1] - r[0], .5, r[3] - r[2], 2), PUTZ, (r[0] + r[1]) / 2, 7.15, (r[2] + r[3]) / 2));
+// the glazed control cab is a real room, reached by a fixed steel ladder from the watch room through a floor hatch
+{ [-15.38, -14.72].forEach(z => vis(new T.CylinderGeometry(.03, .03, 4.3, 6), M.dark, 35.48, UP + 2.15, z));
+  for (let y = UP + .3; y < 7.8; y += .3) vis(new T.BoxGeometry(.04, .04, .66), M.dark, 35.48, y, -15.05);
+  [[35.05, -15.63, 1.16, .06], [35.05, -14.47, 1.16, .06], [34.47, -15.05, .06, 1.16]].forEach(r => vis(new T.BoxGeometry(r[2], .06, r[3]), M.steel, r[0], 6.93, r[1])); }   // hatch coaming
+[[30.8, 35.8, -17.5, -17.3], [30.8, 35.8, -12.7, -12.5], [30.8, 31, -17.3, -12.7], [35.6, 35.8, -17.3, -12.7]].forEach(r => { addBox(r[0], r[1], 6.9, 7.7, r[2], r[3], PUTZ); addBox(r[0], r[1], 7.7, 9.2, r[2], r[3], null, { a: false, s: false }); });   // sill walls; glazing above stops the player, not bullets
+addBox(30.3, 36.3, 9.2, 9.42, -18, -12, M.slab);
+vis(new T.BoxGeometry(4.9, 1.5, 4.9), GLASS, 33.3, 8.45, -15);
+addBox(31.2, 33, 6.9, 7.75, -13.5, -12.9, M.wood); vis(new T.BoxGeometry(.5, .32, .35), M.dark, 32.6, 7.93, -13.2); vis(new T.CylinderGeometry(.05, .05, .5, 6), M.dark, 31.6, 8, -13.2);   // controller's desk, radio, signal lamp
+[[30.85, -17.45], [35.75, -17.45], [30.85, -12.55], [35.75, -12.55], [33.3, -17.45], [33.3, -12.55], [30.85, -15], [35.75, -15]].forEach(c => vis(new T.BoxGeometry(.12, 1.5, .12), M.dark, c[0], 8.45, c[1]));
+{ const pts = [], C = [[30.4, -18.6], [36.6, -18.6], [36.6, -11.4], [30.4, -11.4], [30.4, -18.6]];
+  for (let i = 0; i < 4; i++) { const a = C[i], b = C[i + 1]; for (let k = 0; k < 4; k++) vis(new T.CylinderGeometry(.03, .03, 1, 4), FENCE, lerp(a[0], b[0], k / 4), 7.4, lerp(a[1], b[1], k / 4)); [7.45, 7.9].forEach(h => pts.push(new T.Vector3(a[0], h, a[1]), new T.Vector3(b[0], h, b[1]))); }
+  scene.add(new T.LineSegments(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x59606a }))); }
+vis(new T.CylinderGeometry(.05, .07, 5, 6), FENCE, 33.3, 11.9, -15); vis(new T.BoxGeometry(2.2, .05, .05), FENCE, 33.3, 13.6, -15); vis(new T.BoxGeometry(.05, .05, 2.2), FENCE, 33.3, 13, -15);
+const atcBeacon = vis(new T.SphereGeometry(.16, 8, 6), new T.MeshBasicMaterial({ color: 0xe0382a }), 33.3, 14.5, -15);
+vis(new T.CylinderGeometry(.45, .45, .55, 12), M.dark, 41, 7.45, -9).rotation.z = Math.PI / 2; vis(new T.BoxGeometry(.3, .5, .3), M.steel, 41, 7.1, -9);
+[-19.5, -10.5].forEach(z => vis(new T.ConeGeometry(.28, .55, 10), M.steel, 29.7, 6.2, z).rotation.z = -Math.PI / 2);
+vis(boxGeo(.3, .3, 18.4, 2), M.dark, 29.95, 3.45, -15);                                             // string course between the storeys
+// signal square with landing T on the apron in front
+{ const wm = new T.MeshLambertMaterial({ color: 0xc9c6b8 }), fl = (w, d, x, z) => { const m = vis(new T.PlaneGeometry(w, d), wm, x, .05, z); m.rotation.x = -Math.PI / 2; };
+  fl(5, .25, 25.5, -18.5); fl(5, .25, 25.5, -23.5); fl(.25, 5, 23, -21); fl(.25, 5, 28, -21); fl(2.6, .4, 25.5, -21); fl(.4, 1.8, 26.6, -21); }
+// rooms: radio desks and sets upstairs, a duty counter and benches on the ground floor
+addBox(31, 35, UP, UP + .9, -23.4, -22.6, M.wood); [31.6, 33, 34.4].forEach(x => vis(new T.BoxGeometry(.7, .45, .4), M.dark, x, UP + 1.13, -23.1));
+addBox(38.5, 41.5, 0, 1, -13, -12.2, M.wood);
+[[32, -21.5], [32, -20.2]].forEach(b => vis(boxGeo(2.4, .42, .4, 1), M.wood, b[0], .21, b[1]));
+[33, 37, 41].forEach(x => { paneWindow(x, 1.7, -5.97, 0, 1, 1, 1.3); paneWindow(x, UP + 1.6, -5.97, 0, 1, 1, 1.3); });
+[-21, -18.5].forEach(z => paneWindow(29.97, 1.7, z, -1, 0, 1, 1.3)); [-22, -8].forEach(z => paneWindow(29.97, UP + 1.6, z, -1, 0, 1, 1.3));
+// ---- LAB TUNNEL (underground, floor -3.6 m) ----
+// ATC end: the building has ONE stair core by the entrance. The flight up to the watch room and the flight down to the cellar start side by side
+//          at the same spot (up on the right, down on the left), the way a real building stacks its stairs.
+//          The cellar sits under the south-east of the building with the main power switch; the blast door (opens on power) is in its east wall.
+// Tunnel:  east 8 m, one bend, then a straight 28 m run south.
+// Lab end: up inside the walled stair enclosure in the lab's south-east corner (unchanged).
+{ const U = (x0, x1, z0, z1) => addBox(x0, x1, -3.9, -1, z0, z1, M.wall), F = (x0, x1, z0, z1) => addBox(x0, x1, -3.9, -3.6, z0, z1, M.floor);
+  for (let i = 0; i < 12; i++) addBox(33 + i * .4, 33.4 + i * .4, -3.9, -(i + 1) * .3, -9.8, -8.2, M.slab);                 // ATC flight down, heading east
+  addBox(33, 37.92, 0, 1, -9.92, -9.8, M.steel); addBox(37.8, 37.92, 0, 1, -9.8, -8.2, M.steel);                            // rails round the opening
+  U(33, 37.8, -10, -9.8); U(33, 37.8, -8.2, -8); U(32.8, 33, -10, -8);
+  F(37.8, 43.6, -11.5, -6.6); U(37.6, 37.8, -11.7, -9.8); U(37.6, 37.8, -8.2, -6.4); U(37.6, 43.8, -11.7, -11.5); U(37.6, 43.8, -6.6, -6.4);   // cellar
+  U(43.6, 43.8, -11.5, -9.8); U(43.6, 43.8, -8.2, -6.6);                                                                  // east wall, door gap z -9.8..-8.2
+  [39.4, 40.4].forEach(x => vis(boxGeo(.7, 1.5, .5, 1), M.dark, x, -2.85, -11.2));                                         // switchgear cabinets
+  F(43.6, 52, -9.8, -8.2); U(43.8, 53.8, -10, -9.8); U(43.8, 51.8, -8.2, -8);                                              // east leg
+  F(52, 53.6, -9.8, 18.2); U(51.8, 52, -8.2, 23); U(53.6, 53.8, -9.8, 23.2); U(52, 53.6, 23, 23.2);                         // south run
+  for (let i = 0; i < 12; i++) addBox(52, 53.6, -3.9, -3.6 + (12 - i) * .3, 18.2 + (11 - i) * .4, 18.6 + (11 - i) * .4, M.slab);   // lab flight: bottom at the north end, top at z 23
+  addBox(51.8, 52, 0, 4, 18, 23, M.wall); addBox(52, 53.6, 0, 4, 18, 18.2, M.wall);                                        // stair enclosure (opening faces south)
+}
+const basementDoor = addBox(43.55, 43.8, -3.6, -1, -9.8, -8.2, M.steel);
+// ---- SERVICE TUNNEL + 935 ANNEX LAB (zone 6): through the Storage east door, also on main power ----
+const tunnelDoor = addBox(26, 26.4, 0, 2.2, 11.4, 12.6, M.steel);
+addBox(26.4, 38, 0, 2.9, 10.6, 11, M.wall); addBox(26.4, 38, 0, 2.9, 13, 13.4, M.wall); addBox(26.4, 38, 2.6, 2.9, 11, 13, M.slab); flatFloor(26.4, 38, 11, 13, M.floor);
+wall('z', 38, 38.4, 9, 25, 0, 4, [{ at: 12, w: 2, y0: 0, y1: 2.6 }], M.wall);
+wall('z', 53.6, 54, 9, 25, 0, 4, winOps('aE'), M.wall);
+wall('x', 9, 9.4, 38.4, 53.6, 0, 4, [], M.wall);
+wall('x', 24.6, 25, 38.4, 53.6, 0, 4, winOps('aS'), M.wall);
+addBox(38, 54, 4, 4.3, 9, 25, M.slab); flatFloor(38.4, 52, 9.4, 24.6, M.slab); flatFloor(52, 53.6, 9.4, 18.2, M.slab); flatFloor(52, 53.6, 23, 24.6, M.slab);
+addBox(46, 50, 0, 2.6, 9.4, 10.6, M.dark);                                     // mainframe
+const mainGlow = new T.Mesh(new T.BoxGeometry(3.6, .5, .06), new T.MeshBasicMaterial({ color: 0x66757f })); mainGlow.position.set(48, 1.7, 10.63); scene.add(mainGlow);
+addBox(52.4, 53.6, 0, 2.2, 11, 13, M.steel);                                   // Aufrüster (upgrade machine)
+const upGlow = new T.Mesh(new T.BoxGeometry(.06, .5, 1.4), new T.MeshBasicMaterial({ color: 0x66757f })); upGlow.position.set(52.37, 1.4, 12); scene.add(upGlow);
+addBox(42, 45, 0, .9, 17, 18.2, M.steel); addBox(46.8, 49.8, 0, .9, 17, 18.2, M.steel);   // lab benches
+[[40, 22], [47.5, 23.6]].forEach(t => { const m = new T.Mesh(new T.CylinderGeometry(.5, .5, 2.4, 12), new T.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: .45 })); m.position.set(t[0], 1.2, t[1]); scene.add(m); addBox(t[0] - .5, t[0] + .5, 0, 2.4, t[1] - .5, t[1] + .5, null); });
+// ---- TELEPORTERS: three pads, each linked to the mainframe pad in the annex ----
+const mkPad = (x, y, z) => { const m = new T.Mesh(new T.CylinderGeometry(1.1, 1.1, .08, 20), new T.MeshBasicMaterial({ color: 0x4a5258 })); m.position.set(x, y + .04, z); scene.add(m); return m; };
+const PADS = [{ name: 'Flugleitung', x: 34, y: 0, z: -12.6 }, { name: 'Fuel Depot', x: -30.5, y: 0, z: -5 }, { name: 'Command Post', x: -17.5, y: 0, z: -36.5 }];
+PADS.forEach(pd => { pd.mesh = mkPad(pd.x, pd.y, pd.z); pd.linked = false; });
+const MAINPAD = { x: 48, y: 0, z: 13.4, mesh: mkPad(48, 0, 13.4) };
+const flood = new T.PointLight(0xdfe8ff, 0, 70, 1.2); flood.position.set(8, 14, -34); scene.add(flood);
+// Which parts of the base the player can reach right now. Spawning uses this: the dead only ever come from places that are NOT accessible.
+const REGIONS = [
+  { name: 'blockhouse', r: [-.4, 26.4, -.4, 13.4], ok: () => true },
+  { name: 'airfield',   r: [-14, 30, -64, -.4],    ok: () => G.open.blast },
+  { name: 'depot',      r: [-34, -14, -22, -2],    ok: () => G.open.depot },
+  { name: 'tower',      r: [-34, -14, -40, -22],   ok: () => G.open.tower },
+  { name: 'flug',       r: [30, 44, -24, -6],      ok: () => G.open.flug },
+  { name: 'tunnel',     r: [26.4, 38, 10.6, 13.4], ok: () => G.open.mains },
+  { name: 'annex',      r: [38, 54, 9, 25],        ok: () => G.open.mains },
+];
+const accessible = (x, z) => REGIONS.some(g => x >= g.r[0] && x <= g.r[1] && z >= g.r[2] && z <= g.r[3] && g.ok());
+// ---- Me 323 "Gigant" heavy transport, stranded on the strip. Loads through the open clamshell nose doors, as the real aircraft did; the hold is a dead end. ----
+{ const skin = new T.MeshLambertMaterial({ map: makeTex('#5c665d', .05, 0) }), Z0 = -50;
+  // walkable hold (colliders)
+  addBox(6.5, 17.5, 0, .3, Z0 - 1.6, Z0 + 1.6, M.wood);
+  addBox(6.5, 17.5, 0, 3.6, Z0 - 1.8, Z0 - 1.6, skin);
+  addBox(6.5, 17.5, 0, 3.6, Z0 + 1.6, Z0 + 1.8, skin);
+  addBox(6.5, 17.5, 3.6, 3.9, Z0 - 1.8, Z0 + 1.8, skin);
+  addBox(6.3, 6.5, 0, 3.6, Z0 - 1.8, Z0 + 1.8, skin);                                                // rear bulkhead (closed, as on the real aircraft)
+  addBox(-10.7, 6.3, 0, 3.2, Z0 - 1.3, Z0 + 1.3, null);
+  addBox(9, 14, 0, .9, Z0 - 2.3, Z0 - 1.8, M.dark); addBox(9, 14, 0, .9, Z0 + 1.8, Z0 + 2.3, M.dark);
+  addBox(9.6, 11.1, .3, 1.3, Z0 - 1.5, Z0 - .5, M.wood);
+  // tapering rear fuselage, fin and tailplane
+  [[3.5, 5.6, 3.0, 2.6, 1.9], [-1.9, 5.6, 2.3, 1.9, 2.3], [-7.7, 6, 1.6, 1.2, 2.7]].forEach(t => vis(boxGeo(t[1], t[2], t[3], 2), skin, t[0], t[4], Z0));
+  vis(new T.BoxGeometry(3, 6.6, .22), skin, -9, 6.8, Z0); vis(new T.BoxGeometry(2.8, .2, 16), skin, -9, 4.2, Z0);
+  // shoulder wing with six engines, bracing struts down to the bogies
+  vis(boxGeo(8, .6, 55.2, 2), skin, 11.5, 4.5, Z0);
+  [-18, -12, -6, 6, 12, 18].forEach(d => { vis(new T.CylinderGeometry(.65, .65, 2.6, 12), M.dark, 16.4, 4.4, Z0 + d).rotation.z = Math.PI / 2; vis(new T.ConeGeometry(.3, .6, 8), M.steel, 18, 4.4, Z0 + d).rotation.z = -Math.PI / 2;
+    vis(new T.BoxGeometry(.07, 3.3, .24), M.dark, 17.75, 4.4, Z0 + d).rotation.x = .5; vis(new T.BoxGeometry(.07, 3.3, .24), M.dark, 17.75, 4.4, Z0 + d).rotation.x = .5 + Math.PI / 2; });
+  [1, -1].forEach(sg => { vis(new T.BoxGeometry(.18, 5.75, .18), skin, 11.5, 2.55, Z0 + sg * 4.65).rotation.x = sg * .96; });
+  vis(new T.BoxGeometry(2.4, 1.2, 1.9), M.dark, 16.5, 4.5, Z0);                                      // cockpit glazing over the nose
+  // clamshell nose doors swung open 60 degrees, and two loading ramps up to the hold floor
+  vis(boxGeo(.14, 3.3, 1.9, 2), skin, 17.98, 1.95, Z0 + 2.62).rotation.y = .524; vis(boxGeo(.14, 3.3, 1.9, 2), skin, 17.98, 1.95, Z0 - 2.62).rotation.y = Math.PI - .524;
+  [-.8, .8].forEach(o => { vis(boxGeo(1.6, .08, .6, 1), M.wood, 18.25, .15, Z0 + o).rotation.z = -.19; });
+  { const c = document.createElement('canvas'); c.width = c.height = 128; const k = c.getContext('2d'); k.fillStyle = '#e8e6df'; k.fillRect(44, 8, 40, 112); k.fillRect(8, 44, 112, 40); k.fillStyle = '#111'; k.fillRect(52, 16, 24, 96); k.fillRect(16, 52, 96, 24);
+    const bm = new T.MeshLambertMaterial({ map: new T.CanvasTexture(c), transparent: true }); vis(new T.PlaneGeometry(1.6, 1.6), bm, 15.6, 2.5, Z0 + 1.815); vis(new T.PlaneGeometry(1.6, 1.6), bm, 15.6, 2.5, Z0 - 1.815).rotation.y = Math.PI; }
+  vis(new T.PlaneGeometry(1200, 50), new T.MeshLambertMaterial({ color: 0x33383d }), 9, .02, -45).rotation.x = -Math.PI / 2;   // main runway (no overlap with the old strip)
+  for (let i = 0; i < 9; i++) vis(new T.PlaneGeometry(4, .35), new T.MeshLambertMaterial({ color: 0xb9b6a8 }), -11 + i * 5, .07, -45).rotation.x = -Math.PI / 2; }
+// airfield entries: the dead come out of the fog and climb the perimeter fence here (x, z, outward normal)
+const OUT_ENTRIES = [[-8, -64, 0, -1, 1], [4, -64, 0, -1, 1], [16, -64, 0, -1, 1], [26, -64, 0, -1, 1], [-14, -48, -1, 0, 1], [-14, -58, -1, 0, 1], [30, -44, 1, 0, 1], [30, -56, 1, 0, 1], [-14, -8, -1, 0], [-14, -20, -1, 0], [-14, -34, -1, 0], [30, -32, 1, 0, 1], [30, -3.2, 1, 0], [-8, -.4, 0, 1],
+  [-34, -8, -1, 0], [-34, -16, -1, 0], [-34, -27, -1, 0], [-34, -24.5, -1, 0], [-18, -40, 0, -1], [-15.5, -40, 0, -1], [-18, -2, 0, 1], [-30, -2, 0, 1]]
+  .map(e => ({ climbOnly: true, outdoor: true, ox: e[2], oz: e[3], y: 0, inn: { x: e[0] - e[2] * .9, y: 0, z: e[1] - e[3] * .9 }, route: e[4] ? [[e[0] + e[2] * .9, 0, e[1] + e[3] * .9], [e[0] - e[2] * .9, 0, e[1] - e[3] * .9]]   // open runway edge: they simply walk in out of the fog
+      : [[e[0] + e[2] * .9, 0, e[1] + e[3] * .9], [e[0] + e[2] * .9, 2.6, e[1] + e[3] * .9], [e[0] - e[2] * .9, 2.6, e[1] - e[3] * .9], [e[0] - e[2] * .9, 0, e[1] - e[3] * .9]] }));
+// ---- period dressing: Luftwaffe field installation, winter 1944-45 ----
+const SHADE = new T.MeshLambertMaterial({ color: 0x24362c, side: T.DoubleSide });   // enamel lamp shades
+const IRON = new T.MeshLambertMaterial({ color: 0x1b1d1f }), FELD = new T.MeshLambertMaterial({ color: 0x3f4a3c }), BLANKET = new T.MeshLambertMaterial({ color: 0x5a5f66 });
+function paintSign(draw, cw, ch, x, y, z, nx, nz, pw, ph) {
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch; const tx = new T.CanvasTexture(c);
+  const redraw = () => { const g = c.getContext('2d'); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, cw, ch); draw(g, cw, ch); tx.needsUpdate = true; };
+  redraw(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(redraw).catch(() => {});
+  const m = new T.Mesh(new T.PlaneGeometry(pw, ph), new T.MeshLambertMaterial({ map: tx, transparent: true })); m.position.set(x, y, z);
+  if (nx === 0 && nz === 0) m.rotation.x = -Math.PI / 2; else m.rotation.y = nz < 0 ? Math.PI : nz > 0 ? 0 : nx < 0 ? -Math.PI / 2 : Math.PI / 2;
+  scene.add(m); return m;
+}
+// stencilled wall lettering with paint wear
+function stencil(text, color, x, y, z, nx, nz, pw, ph) {
+  paintSign((g, w, h) => {
+    g.fillStyle = color; g.textAlign = 'center'; g.textBaseline = 'middle'; let size = h * .72; const f = n => `800 ${n}px "Big Shoulders Stencil Display", Impact, "Arial Narrow", sans-serif`;
+    g.font = f(size); const tw = g.measureText(text).width; if (tw > w * .94) { size *= w * .94 / tw; g.font = f(size); }
+    g.globalAlpha = .85; g.fillText(text, w / 2, h / 2);
+    g.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 240; i++) { g.globalAlpha = rand() * .65; g.fillRect(rand() * w, rand() * h, 1 + rand() * 6, 1 + rand() * 3); }
+  }, 512, 128, x, y, z, nx, nz, pw, ph);
+}
+const WHITE = '#e9e6da', BLACK = '#16181a', YELLOW = '#d9b23a';
+stencil('FLUGLEITUNG', WHITE, 29.985, 2.9, -15, -1, 0, 3, .5);
+stencil('WERKBANK', WHITE, 9, 1.95, 12.988, 0, -1, 1.3, .32);
+stencil('NOTSTROM', YELLOW, 23.3, 2.2, 12.988, 0, -1, 1.6, .34);
+stencil('LAGER', WHITE, 15.79, 2.65, 11.8, -1, 0, 1.3, .34);
+stencil('ZUM FLUGFELD', WHITE, 7.5, 2.55, .012, 0, 1, 2.4, .42);
+stencil('TREPPE', WHITE, 13.99, 2.4, 5.2, -1, 0, 1.3, .34);
+stencil('RAUCHEN VERBOTEN', YELLOW, 18.3, 2.5, 12.988, 0, -1, 2.4, .4);
+stencil('LICHT AUS!', WHITE, 25.988, 2.6, 10.6, -1, 0, 1.6, .38);
+stencil('FEIND HÖRT MIT!', YELLOW, 8.6, UP + 2.6, 12.988, 0, -1, 2.6, .44);
+stencil('FUNKRAUM', WHITE, 8.2, UP + 2.5, 8.888, 0, -1, 1.8, .4);
+stencil('MUNITION', WHITE, 25.988, UP + 2.6, 2.2, -1, 0, 1.6, .38);
+stencil('Fl.H. 935', WHITE, 19, 2.5, -.412, 0, -1, 3.2, .7);
+stencil('PATRONEN 7,92', BLACK, 23.588, .55, 9.3, -1, 0, 1.2, .3);
+// airfield chart: pinned on the wall, and a second copy spread on the map table
+const chart = (g, w, h) => { g.fillStyle = '#cdbf9a'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(60,50,35,.35)'; g.lineWidth = 1; for (let i = 16; i < w; i += 32) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke(); } for (let i = 16; i < h; i += 32) { g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke(); }
+  g.strokeStyle = '#3b3226'; g.lineWidth = 9; g.beginPath(); g.moveTo(w * .1, h * .3); g.lineTo(w * .9, h * .42); g.stroke(); g.lineWidth = 3; g.strokeRect(w * .42, h * .58, w * .12, h * .1); g.strokeRect(w * .7, h * .55, w * .14, h * .12); g.beginPath(); g.arc(w * .25, h * .62, 12, 0, 6.3); g.stroke();
+  g.strokeStyle = '#8d2a20'; g.lineWidth = 3; g.beginPath(); g.arc(w * .47, h * .62, 26, 0, 6.3); g.stroke(); g.fillStyle = '#3b3226'; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.font = 'bold 20px "Courier New", monospace'; g.fillText('Fliegerhorst 935   1:5000', 14, h - 14); };
+paintSign(chart, 384, 256, .012, 1.85, 8.8, 1, 0, 1.3, .87);
+paintSign(chart, 384, 256, 8, .905, 6.5, 0, 0, 1.5, .8);
+paintSign(chart, 384, 256, 39, UP + 1.9, -23.588, 0, 1, 2.2, 1.47); paintSign(chart, 384, 256, -26.6, .905, -32.15, 0, 0, 1.6, 1.1); paintSign(chart, 384, 256, -27.5, 1.45, -37.488, 0, 1, 1.5, 1);
+stencil('WETTERWARTE', WHITE, 36, 2.6, -6.412, 0, -1, 2, .36); stencil('FUNK', WHITE, 33, UP + 2.3, -23.588, 0, 1, 1, .34); stencil('ZUR FLUGLEITUNG', YELLOW, 51.788, 2.5, 20.5, -1, 0, 2.6, .38); stencil('HAUPTSCHALTER', YELLOW, 35.4, 2.5, -8.212, 0, -1, 2.4, .36);
+// radio set face (dials) on the Radio Room desk
+paintSign((g, w, h) => { g.fillStyle = '#2a2d2f'; g.fillRect(0, 0, w, h); g.strokeStyle = '#c9c4b0'; g.lineWidth = 3; [[.2, .5, 34], [.5, .5, 22], [.76, .5, 30]].forEach(d => { g.beginPath(); g.arc(w * d[0], h * d[1], d[2], 0, 6.3); g.stroke(); g.beginPath(); g.moveTo(w * d[0], h * d[1]); g.lineTo(w * d[0] + d[2] * .8, h * d[1] - d[2] * .5); g.stroke(); }); g.fillStyle = '#c9c4b0'; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.font = 'bold 15px "Courier New", monospace'; g.fillText('Torn.Fu.d2', 8, 18); }, 256, 128, 6.112, UP + 1.1, 11.3, 1, 0, .78, .38);
+// steel embrasure frames around every window
+WINDOWS.forEach(w => { if (w.climbOnly) return; const y0 = w.lvl * UP + 1, add = (sx, sy, sz, ox, oy, oz) => { const m = new T.Mesh(new T.BoxGeometry(sx, sy, sz), M.steel); m.position.set(w.cx + ox, y0 + oy, w.cz + oz); scene.add(m); };
+  if (w.ax === 'x') { add(.07, 1.3, .5, -.83, .65, 0); add(.07, 1.3, .5, .83, .65, 0); add(1.73, .07, .5, 0, 1.33, 0); add(1.73, .07, .5, 0, -.03, 0); }
+  else { add(.5, 1.3, .07, 0, .65, -.83); add(.5, 1.3, .07, 0, .65, .83); add(.5, .07, 1.73, 0, 1.33, 0); add(.5, .07, 1.73, 0, -.03, 0); } });
+// cast-iron stove with flue (Start Room corner)
+{ const st = new T.Mesh(new T.CylinderGeometry(.22, .26, .9, 12), IRON); st.position.set(.7, .45, .7); scene.add(st); const fl = new T.Mesh(new T.CylinderGeometry(.06, .06, 2.5, 8), IRON); fl.position.set(.7, 2.1, .7); scene.add(fl); addBox(.42, .98, 0, .9, .42, .98, null); }
+// two-tier bunks
+function bunk(x0, z0, y) { addBox(x0, x0 + .9, y, y + 1.7, z0, z0 + 1.95, null);
+  [[0, 0], [.84, 0], [0, 1.89], [.84, 1.89]].forEach(o => { const m = new T.Mesh(new T.BoxGeometry(.06, 1.75, .06), M.wood); m.position.set(x0 + .03 + o[0], y + .875, z0 + .03 + o[1]); scene.add(m); });
+  [.45, 1.35].forEach(h => { const b = new T.Mesh(boxGeo(.9, .08, 1.95, 1), M.wood); b.position.set(x0 + .45, y + h, z0 + .975); scene.add(b); const k = new T.Mesh(new T.BoxGeometry(.84, .1, 1.5), BLANKET); k.position.set(x0 + .45, y + h + .09, z0 + 1.1); scene.add(k); }); }
+bunk(.1, 1.6, 0); bunk(5.1, 6, UP);
+// 200-litre fuel drums and jerrycans under the stair landing (Storage)
+[[24.7, .65], [25.45, .7], [25.1, 1.35]].forEach(d => { const m = new T.Mesh(new T.CylinderGeometry(.29, .29, .88, 14), FELD); m.position.set(d[0], .44, d[1]); scene.add(m); [.15, .44, .73].forEach(h => { const r = new T.Mesh(new T.CylinderGeometry(.3, .3, .03, 14), IRON); r.position.set(d[0], h, d[1]); scene.add(r); }); });
+addBox(24.35, 25.8, 0, .9, .3, 1.7, null);
+[[23.6, 2.7, .2], [23.9, 2.85, -.3]].forEach(j => { const m = new T.Mesh(new T.BoxGeometry(.16, .47, .34), FELD); m.position.set(j[0], .235, j[1]); m.rotation.y = j[2]; scene.add(m); });
+// outside: runway strip, windsock mast, wire obstacle
+{
+  const mast = new T.Mesh(new T.CylinderGeometry(.05, .07, 6, 6), IRON); mast.position.set(-7, 3, -16); scene.add(mast); const sock = new T.Mesh(new T.ConeGeometry(.35, 1.6, 8, 1, true), new T.MeshLambertMaterial({ color: 0xb4532a, side: T.DoubleSide })); sock.rotation.z = Math.PI / 2 + .25; sock.position.set(-6.1, 5.75, -16); scene.add(sock);
+  const pts = []; for (let i = 0; i < 12; i++) { const x = -8 + i * 4, p = new T.Mesh(new T.CylinderGeometry(.04, .05, 1.4, 5), M.wood); p.position.set(x, .7, 21); p.rotation.z = (rand() - .5) * .2; scene.add(p); if (i) [.5, .9, 1.3].forEach(h => pts.push(new T.Vector3(x - 4, h, 21), new T.Vector3(x, h + (rand() - .5) * .15, 21))); }
+  scene.add(new T.LineSegments(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x4a4f55 }))); }
+// lights
+const amb = new T.AmbientLight(0x66748a, .55); scene.add(amb);
+const moon = new T.DirectionalLight(0x8fa6c8, .35); moon.position.set(-8, 14, -10); scene.add(moon);
+const lamps = [[5, 3.0, 6.5], [12, 3.0, 5], [21, 3.0, 7], [12.5, 7.0, 7], [21, 7.0, 8], [23.4, 7.0, 3], [7, 7.0, 5], [37, 3.0, -15], [37, 6.3, -13], [33.3, 8.75, -14.6], [-27, 1.75, -34.5], [40.6, -1.45, -8.6], [52.8, -1.45, -2], [52.8, -1.45, 8], [46, 3.4, 16], [32, 2.1, 12]].map(p => {
+  const l = new T.PointLight(0xffc98a, 1.0, 13, 1.6); l.position.set(p[0], p[1], p[2]); scene.add(l);
+  const bulb = new T.Mesh(new T.SphereGeometry(.09, 8, 6), new T.MeshBasicMaterial({ color: 0xffe2b0 })); bulb.position.set(p[0], p[1] + .15, p[2]); scene.add(bulb);
+  const shade = new T.Mesh(new T.ConeGeometry(.3, .16, 14, 1, true), SHADE); shade.position.set(p[0], p[1] + .24, p[2]); scene.add(shade); const cord = new T.Mesh(new T.CylinderGeometry(.012, .012, .5, 4), SHADE); cord.position.set(p[0], p[1] + .55, p[2]); scene.add(cord);
+  return { l, bulb };
+});
+const fire = new T.PointLight(0xff7a2a, 1.6, 30, 1.4); fire.position.set(19, 1.8, -24.6); scene.add(fire);
+const torch = new T.SpotLight(0xdfeaff, 0, 24, .5, .5, 1.2); camera.add(torch); torch.position.set(.2, -.1, 0); camera.add(torch.target); torch.target.position.set(0, 0, -1);
+const muzzleLight = new T.PointLight(0xffc56a, 0, 9, 2); scene.add(muzzleLight);
+
+/* =====================================================================
+   5. PHYSICS + RAYS
+   ===================================================================== */
+function groundAt(x, z, feet, f) {
+  let g = -50; const r = .15;
+  for (let i = 0; i < boxes.length; i++) { const b = boxes[i]; if (b.off || !b[f]) continue; if (x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r && b.y1 <= feet + CFG.step + .001 && b.y1 > g) g = b.y1; }
+  return g;
+}
+function collide(e, r, f, h) {
+  for (let it = 0; it < 2; it++) for (let i = 0; i < boxes.length; i++) {
+    const b = boxes[i]; if (b.off || !b[f]) continue;
+    if (b.y1 <= e.y + CFG.step + .001 || b.y0 >= e.y + h - .05) continue;
+    const cx = clamp(e.x, b.x0, b.x1), cz = clamp(e.z, b.z0, b.z1), dx = e.x - cx, dz = e.z - cz, d2 = dx * dx + dz * dz;
+    if (d2 >= r * r) continue;
+    if (d2 > 1e-9) { const d = Math.sqrt(d2), p = (r - d) / d; e.x += dx * p; e.z += dz * p; }
+    else { const l = e.x - b.x0, rr = b.x1 - e.x, n = e.z - b.z0, s = b.z1 - e.z, m = Math.min(l, rr, n, s); if (m === l) e.x = b.x0 - r; else if (m === rr) e.x = b.x1 + r; else if (m === n) e.z = b.z0 - r; else e.z = b.z1 + r; }
+  }
+}
+function moveEntity(e, dx, dz, dt, r, f, h) {
+  e.x += dx; e.z += dz; collide(e, r, f, h);
+  const was = e.onGround;
+  e.vy -= CFG.gravity * dt; let ny = e.y + e.vy * dt;
+  if (e.vy > 0) for (let i = 0; i < boxes.length; i++) { const b = boxes[i]; if (b.off || !b[f]) continue; if (e.x > b.x0 - r * .8 && e.x < b.x1 + r * .8 && e.z > b.z0 - r * .8 && e.z < b.z1 + r * .8 && b.y0 >= e.y + h - .3 && b.y0 < ny + h) { ny = b.y0 - h; e.vy = 0; } }
+  const g = groundAt(e.x, e.z, e.y, f);
+  if (ny <= g || (was && e.vy <= 0 && e.y - g <= CFG.step + .01)) { ny = g; e.vy = 0; e.onGround = true; } else e.onGround = false;
+  e.y = ny;
+}
+function rayBox(ox, oy, oz, dx, dy, dz, b) {
+  let t0 = 0, t1 = 1e9;
+  const ax = [[ox, dx, b.x0, b.x1], [oy, dy, b.y0, b.y1], [oz, dz, b.z0, b.z1]];
+  for (let i = 0; i < 3; i++) { const o = ax[i][0], d = ax[i][1], lo = ax[i][2], hi = ax[i][3];
+    if (Math.abs(d) < 1e-9) { if (o < lo || o > hi) return Infinity; continue; }
+    let a = (lo - o) / d, c = (hi - o) / d; if (a > c) { const s = a; a = c; c = s; } if (a > t0) t0 = a; if (c < t1) t1 = c; if (t0 > t1) return Infinity; }
+  return t0;
+}
+function rayWorld(ox, oy, oz, dx, dy, dz, f, maxT) { let t = maxT; for (let i = 0; i < boxes.length; i++) { const b = boxes[i]; if (b.off || !b[f]) continue; const h = rayBox(ox, oy, oz, dx, dy, dz, b); if (h < t) t = h; } return t; }
+function los(ax, ay, az, bx, by, bz) { const dx = bx - ax, dy = by - ay, dz = bz - az, d = Math.hypot(dx, dy, dz); if (d < .05) return true; return rayWorld(ax, ay, az, dx / d, dy / d, dz / d, 'a', d) >= d - .02; }
+function raySphere(ox, oy, oz, dx, dy, dz, cx, cy, cz, r) { const lx = cx - ox, ly = cy - oy, lz = cz - oz, tc = lx * dx + ly * dy + lz * dz; if (tc < 0) return Infinity; const d2 = lx * lx + ly * ly + lz * lz - tc * tc; if (d2 > r * r) return Infinity; return tc - Math.sqrt(r * r - d2); }
+
+/* =====================================================================
+   6. NAVIGATION (all-pairs next hop, rebuilt when a door opens)
+   ===================================================================== */
+const NI = {}; NODES.forEach((n, i) => NI[n.id] = i);
+let NEXT = [], NDIST = [];
+function buildNav() {
+  const n = NODES.length; NDIST = []; NEXT = [];
+  for (let i = 0; i < n; i++) { NDIST.push(new Array(n).fill(Infinity)); NEXT.push(new Array(n).fill(-1)); NDIST[i][i] = 0; NEXT[i][i] = i; }
+  EDGES.forEach(e => { if (e[2] && !G.open[e[2]]) return; const a = NI[e[0]], b = NI[e[1]], A = NODES[a], B = NODES[b], d = Math.hypot(A.x - B.x, A.y - B.y, A.z - B.z); NDIST[a][b] = NDIST[b][a] = d; NEXT[a][b] = b; NEXT[b][a] = a; });
+  for (let k = 0; k < n; k++) for (let i = 0; i < n; i++) { if (NDIST[i][k] === Infinity) continue; for (let j = 0; j < n; j++) if (NDIST[i][k] + NDIST[k][j] < NDIST[i][j]) { NDIST[i][j] = NDIST[i][k] + NDIST[k][j]; NEXT[i][j] = NEXT[i][k]; } }
+}
+function nearestNode(x, y, z, needLos) {
+  let best = -1, bd = 1e9;
+  for (let i = 0; i < NODES.length; i++) { const n = NODES[i], dy = Math.abs(n.y - y); const d = Math.hypot(n.x - x, n.z - z) + dy * 4; if (d >= bd) continue; if (needLos && (dy > 1.3 || !los(x, y + .6, z, n.x, n.y + .6, n.z))) continue; bd = d; best = i; }
+  return best < 0 && needLos ? nearestNode(x, y, z, false) : best;
+}
+
+/* =====================================================================
+   7. AUDIO (synthesised, no assets)
+   ===================================================================== */
+let AC = null, master = null, noiseBuf = null, droneGain = null;
+function initAudio() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; return; }
+  master = AC.createGain(); master.gain.value = .45; master.connect(AC.destination);
+  noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = rand() * 2 - 1;
+  // ambience: low drone + wind
+  const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 170; const dg = AC.createGain(); dg.gain.value = .07; droneGain = dg; lp.connect(dg); dg.connect(master);
+  [41, 43.6, 61.7].forEach(f => { const o = AC.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(lp); o.start(); });
+  const lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.value = .07; lg.gain.value = .08; lfo.connect(lg); lg.connect(dg.gain); lfo.start();
+  const wn = AC.createBufferSource(); wn.buffer = noiseBuf; wn.loop = true; const wf = AC.createBiquadFilter(); wf.type = 'bandpass'; wf.frequency.value = 420; wf.Q.value = .6; const wg = AC.createGain(); wg.gain.value = .05; wn.connect(wf); wf.connect(wg); wg.connect(master); wn.start();
+  const wl = AC.createOscillator(), wlg = AC.createGain(); wl.frequency.value = .11; wlg.gain.value = 250; wl.connect(wlg); wlg.connect(wf.frequency); wl.start();
+}
+function sNoise(dur, freq, vol, type, when) { if (!AC) return; const s = AC.createBufferSource(); s.buffer = noiseBuf; const f = AC.createBiquadFilter(); f.type = type || 'lowpass'; f.frequency.value = freq; const g = AC.createGain(), t = AC.currentTime + (when || 0); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur); s.connect(f); f.connect(g); g.connect(master); s.start(t, rand() * .5, dur + .05); }
+function sTone(f0, f1, dur, vol, wave, when) { if (!AC) return; const o = AC.createOscillator(); o.type = wave || 'sine'; const g = AC.createGain(), t = AC.currentTime + (when || 0); o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur); o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .05); }
+const SFX = {
+  shot: d => { sNoise(d.snd[0], d.snd[1], .9); sTone(170, 45, d.snd[0] * .8, .7); if (d.beam) sTone(1800, 90, .5, .35, 'sawtooth'); },
+  click: () => sTone(1300, 900, .04, .2, 'square'),
+  reload: () => { sNoise(.05, 3000, .25, 'highpass'); sNoise(.06, 2500, .3, 'highpass', .35); },
+  groan: v => sTone(95 + rand() * 50, 60 + rand() * 20, .5 + rand() * .5, v, 'sawtooth'),
+  hurt: () => { sTone(110, 40, .3, .6, 'square'); sNoise(.2, 500, .5); },
+  buy: () => { sTone(660, 660, .09, .25, 'triangle'); sTone(990, 990, .14, .25, 'triangle', .09); },
+  deny: () => sTone(160, 120, .15, .25, 'square'),
+  board: () => sNoise(.12, 900, .5, 'bandpass'),
+  fix: () => { sNoise(.05, 1400, .5, 'bandpass'); sTone(220, 180, .06, .3, 'square'); },
+  round: () => { [147, 139, 110].forEach((f, i) => sTone(f, f, .9, .3, 'sawtooth', i * .55)); },
+  night: () => { sTone(60, 30, 2.2, .6, 'sawtooth'); sNoise(1.8, 300, .5); },
+  power: () => { [523, 659, 784].forEach((f, i) => sTone(f, f, .16, .25, 'triangle', i * .09)); },
+  boom: () => { sNoise(.9, 400, 1.2); sTone(90, 25, .8, .9); },
+  zap: () => { sNoise(.25, 4000, .4, 'highpass'); sTone(1400, 200, .25, .2, 'sawtooth'); },
+  knife: () => sNoise(.09, 3500, .35, 'highpass'),
+  horde: () => { for (let i = 0; i < 5; i++) sTone(70 + rand() * 60, 50 + rand() * 20, .9 + rand() * .5, .1, 'sawtooth', i * .16); },
+  beat: () => { sTone(58, 38, .12, .7); sTone(52, 34, .14, .5, 'sine', .17); },
+  step: () => sNoise(.06, 260, .16),
+  pant: () => { sNoise(.35, 900, .2, 'bandpass'); sNoise(.4, 700, .16, 'bandpass', .55); },
+  sting: () => { sTone(622, 610, .9, .12, 'sawtooth'); sTone(659, 668, .9, .12, 'sawtooth'); sTone(98, 92, 1.1, .3, 'sawtooth'); },
+};
+
+/* =====================================================================
+   8. STATE
+   ===================================================================== */
+const G = { state: 'menu', open: { doorA: false, debris: false, blast: false, depot: false, tower: false, flug: false, mains: false } };
+const P = { weapons: [] };
+const zombies = [], powerups = [], grenades = [], fx = [];
+let playerNode = 0, navT = 0, bannerT = 0, time = 0;
+
+function newGame() {
+  zombies.forEach(z => scene.remove(z.g)); zombies.length = 0;
+  powerups.forEach(p => scene.remove(p.m)); powerups.length = 0;
+  grenades.forEach(g => scene.remove(g.m)); grenades.length = 0; clearMedkits();
+  Object.assign(G, { round: 0, points: CFG.startPoints, kills: 0, heads: 0, toSpawn: 0, spawnT: 0, phase: 'inter', inter: 3.5, night: false, power: 0, gen: false, insta: 0, dbl: 0, drops: 0, open: { doorA: false, debris: false, blast: false, depot: false, tower: false, flug: false, mains: false } });
+  doorA.off = false; doorA.mesh.visible = true; doorA.mesh.position.y = 1.1; debris.off = false; debrisGroup.visible = true;
+  WINDOWS.forEach(w => setBoards(w, w.id === 'N1' || w.id === 'W1' ? 3 : CFG.boards));   // two start-room windows begin half boarded
+  crate.state = 'idle'; crateGlow.visible = false; setCrateSpot(0); resetBuildable(); resetMap();
+  Object.assign(P, { x: 8, y: 0, z: 9.5, vy: 0, onGround: true, yaw: 0, pitch: 0, hp: CFG.player.hp, lastHit: -10, cur: 0, fireT: 0, reloadT: 0, switchT: 0, ads: 0, gren: 2, knifeT: 0, eyeY: CFG.player.eye, bob: 0, kick: 0, vx: 0, vz: 0, repairT: 0, stam: 1, winded: false });
+  P.weapons = [{ id: 'p38', mag: WEAPONS.p38.mag, res: WEAPONS.p38.res }];
+  buildNav(); setGun();
+}
+
+/* =====================================================================
+   9. ZOMBIES — Luftwaffe ground crew; "echoes" on Night Rounds
+   ===================================================================== */
+const ZG = { leg: new T.BoxGeometry(.18, .85, .2), torso: new T.BoxGeometry(.5, .62, .27), arm: new T.BoxGeometry(.13, .6, .13), head: new T.BoxGeometry(.25, .25, .25), cap: new T.BoxGeometry(.28, .08, .32), eye: new T.BoxGeometry(.05, .04, .02) };
+const ZM = { suit: new T.MeshLambertMaterial({ color: 0x47525e }), skin: new T.MeshLambertMaterial({ color: 0x8c9878 }), cap: new T.MeshLambertMaterial({ color: 0x2b3440 }), eye: new T.MeshBasicMaterial({ color: 0xffc23d }), echo: new T.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: .8 }), echoEye: new T.MeshBasicMaterial({ color: 0xffffff }) };
+function buildZombie(echo) {
+  const g = new T.Group(), suit = echo ? ZM.echo : ZM.suit, skin = echo ? ZM.echo : ZM.skin, parts = {};
+  const piv = (x, y, geo, mat, oy) => { const p = new T.Group(); p.position.set(x, y, 0); const m = new T.Mesh(geo, mat); m.position.y = oy; p.add(m); g.add(p); return p; };
+  parts.lL = piv(-.13, .85, ZG.leg, suit, -.425); parts.lR = piv(.13, .85, ZG.leg, suit, -.425);
+  const t = new T.Mesh(ZG.torso, suit); t.position.y = 1.16; g.add(t);
+  parts.aL = piv(-.32, 1.42, ZG.arm, skin, -.3); parts.aR = piv(.32, 1.42, ZG.arm, skin, -.3);
+  parts.head = new T.Group(); parts.head.position.y = 1.6;
+  parts.head.add(new T.Mesh(ZG.head, skin));
+  if (!echo) { const c = new T.Mesh(ZG.cap, ZM.cap); c.position.set(0, .16, .02); parts.head.add(c); }
+  [-.06, .06].forEach(x => { const e = new T.Mesh(ZG.eye, echo ? ZM.echoEye : ZM.eye); e.position.set(x, .02, .13); parts.head.add(e); });
+  g.add(parts.head); scene.add(g);
+  return { g, parts };
+}
+const playerOutside = () => P.z < -.3 && P.y < 3;
+function rollSpeed() { const r = G.round, roll = rand(); let sp = CFG.zombie.walk; if (r >= 9) sp = roll < ROUNDS.sprintShare(r) ? CFG.zombie.sprint : CFG.zombie.run; else if (r >= 6) sp = roll < .85 ? CFG.zombie.run : CFG.zombie.walk; else if (r >= 3) sp = roll < .25 + .12 * (r - 3) ? CFG.zombie.run : CFG.zombie.walk; return sp * (.9 + rand() * .2); }
+// A spawn point is only legal if the camera cannot see it: off-screen, behind solid geometry, or far enough to be lost in the fog.
+function hiddenFromPlayer(x, y, z) {
+  if (NET.mode === 'host') for (const k in NET.remotes) { const r = NET.remotes[k]; if (Math.hypot(x - r.x, z - r.z) < 40 && los(r.x, r.y + 1.6, r.z, x, y + 1.2, z)) return false; }   // nor may any other player see it
+  const B = aimBasis(), ex = P.x, ey = (P.camY === undefined ? P.y : P.camY) + CFG.player.eye, ez = P.z, hs = [1.6, .7];
+  for (let i = 0; i < 2; i++) { const dx = x - ex, dy = y + hs[i] - ey, dz = z - ez, d = Math.hypot(dx, dy, dz); if (d > 56) continue;
+    if ((dx * B.f[0] + dy * B.f[1] + dz * B.f[2]) / d < .3) continue;
+    if (rayWorld(ex, ey, ez, dx / d, dy / d, dz / d, 's', d) < d - .1) continue;
+    return false; }
+  return true;
+}
+// Every enemy, echoes included, starts somewhere the player cannot reach at that moment (beyond a fence, in a locked yard, outside the walls)
+// and out of sight, then walks in through a window or over a fence.
+function entryUsable(w) { return (!w.gated || G.open.doorA || G.open.debris) && accessible(w.inn.x, w.inn.z) && !accessible(w.route[0][0], w.route[0][2]); }
+function spawnZombie(echo, prefer) {
+  const pool = WINDOWS.concat(OUT_ENTRIES).filter(entryUsable); if (!pool.length) return false;
+  const key = w => Math.hypot(w.inn.x - P.x, w.inn.z - P.z) + Math.abs(w.y - P.y) * 3;
+  pool.sort((a, b) => key(a) - key(b));
+  const w = prefer && pool.includes(prefer) ? prefer : pool[Math.floor(rand() * Math.min(pool.length, 5))], f = w.route[0], tries = [13, 20, 30, 42, 58, 76, 95];
+  let x = 0, zz = 0, ok = false;
+  for (let i = 0; i < tries.length && !ok; i++) {
+    const d = tries[i] + rand() * 4, lat = (rand() - .5) * (4 + d * .1) * (prefer ? 2.2 : 1); x = f[0] + w.ox * d + w.oz * lat; zz = f[2] + w.oz * d + w.ox * lat;
+    ok = !accessible(x, zz) && hiddenFromPlayer(x, 0, zz);
+    for (let k = 1; k < 6 && ok; k++) ok = !accessible(lerp(x, f[0], k / 6), lerp(zz, f[2], k / 6));   // and the walk in never crosses playable ground
+  }
+  if (!ok) return false;   // nowhere legal on this approach right now; the director retries shortly with another entry
+  const b = buildZombie(!!echo);
+  zombies.push(Object.assign(b, { type: echo ? 'echo' : 'z', x, y: 0, z: zz, vy: 0, onGround: true, yaw: 0, hp: echo ? ROUNDS.nightHp(G.round) : ROUNDS.hp(G.round), speed: echo ? 1.4 + rand() * .5 : rollSpeed(), state: 'approach', win: w, ri: 0, t: 0, node: -1, think: 0, direct: false, atk: echo ? .6 : 0, wind: 0, phase: rand() * 6, stuckT: 1, sx: 0, sz: 0, inside: false }));
+  return w;
+}
+function spawnEcho() {
+  const c = []; for (let i = 0; i < NODES.length; i++) { const n = NODES[i]; if (NDIST[playerNode][i] < Infinity && Math.hypot(n.x - P.x, n.z - P.z) + Math.abs(n.y - P.y) * 2 > 6) c.push(i); }
+  const hid = c.filter(i => hiddenFromPlayer(NODES[i].x, NODES[i].y, NODES[i].z)); if (!hid.length) return false;
+  const ni = hid[Math.floor(rand() * hid.length)], n = NODES[ni], b = buildZombie(true);
+  zombies.push(Object.assign(b, { type: 'echo', x: n.x, y: n.y, z: n.z, vy: 0, onGround: true, yaw: 0, hp: ROUNDS.nightHp(G.round), speed: 1.4 + rand() * .5, state: 'chase', win: null, ri: 0, t: 0, node: ni, think: 0, direct: false, atk: .6, wind: 0, phase: rand() * 6, stuckT: 1, sx: n.x, sz: n.z, inside: true }));
+  burst(n.x, n.y + 1, n.z, 0x9fd8ff, 14, 4); SFX.zap(); return true;
+}
+function damageZombie(z, dmg, head, kind) {
+  if (NET.mode === 'client') return NET.report(z, dmg, head, kind);
+  if (z.state === 'dying') return;
+  if (G.insta > 0) dmg = z.hp + 1;
+  z.hp -= dmg; if (z.type === 'echo') z.stag = head ? .7 : .3; hitMarker(head);
+  burst(z.x, z.y + (head ? 1.6 : 1.1), z.z, z.type === 'echo' ? 0x9fd8ff : 0x7a1410, 4, 2.5);
+  if (kind === 'gun') addPoints(CFG.pts.hit);
+  if (z.hp <= 0) {
+    z.state = 'dying'; z.t = 0; z.headshot = head; if (head) { z.parts.head.visible = false; G.heads++; }
+    G.kills++; addPoints(kind === 'knife' ? CFG.pts.knife : kind === 'nade' ? CFG.pts.nade : head ? CFG.pts.head : CFG.pts.kill);
+    const left = zombies.filter(q => q.state !== 'dying').length + G.toSpawn;
+    if (G.night && left === 0) dropPowerup('ammo', z.x, z.y, z.z);
+    else if (z.type === 'echo' && rand() < .2) spawnMedkit(z.x, z.y, z.z);
+    else if (!G.night && z.inside && G.drops < 3 && rand() < .04) { const k = Object.keys(POWERUPS); dropPowerup(k[Math.floor(rand() * k.length)], z.x, z.y, z.z); G.drops++; }
+  }
+}
+function updateZombies(dt) {
+  let groanV = 0;
+  for (let i = zombies.length - 1; i >= 0; i--) {
+    const z = zombies[i], p = z.parts; z.phase += dt * (2 + z.speed * 1.6);
+    if (z.state === 'dying') {
+      z.t += dt;
+      if (z.type === 'echo') z.g.scale.setScalar(Math.max(.01, 1 - z.t * 3)); else { z.g.rotation.x = -Math.min(1, z.t / .35) * Math.PI / 2; if (z.t > 1.4) z.g.position.y -= dt * .5; }
+      if (z.t > (z.type === 'echo' ? .35 : 2.6)) { scene.remove(z.g); zombies.splice(i, 1); }
+      continue;
+    }
+    let moving = false, climbing = false;
+    if (z.state === 'approach') {
+      if (G.open.blast && z.ri === 0 && z.z < -.7 && z.x > -13 && z.x < 29 && z.y < .05 && playerOutside() && Math.hypot(P.x - z.x, P.z - z.z) < 10) { z.state = 'chase'; z.inside = true; z.vy = 0; z.node = -1; z.think = 0; z.sx = z.x; z.sz = z.z; z.g.position.set(z.x, z.y, z.z); continue; }
+      const r = z.win.route[z.ri], dx = r[0] - z.x, dy = r[1] - z.y, dz = r[2] - z.z, d = Math.hypot(dx, dy, dz);
+      climbing = Math.abs(dy) > .3 && Math.hypot(dx, dz) < .3;
+      const st = (climbing ? 1.8 : Math.max(z.speed, Math.hypot(P.x - z.x, P.z - z.z) > 30 ? 4.6 : 1.6)) * dt;   // hurry while still deep in the fog
+      if (d <= st) { z.x = r[0]; z.y = r[1]; z.z = r[2]; z.ri++; if (z.ri >= z.win.route.length) { if (z.win.climbOnly) { z.state = 'chase'; z.vy = 0; z.inside = true; z.node = -1; z.think = 0; z.sx = z.x; z.sz = z.z; } else { z.state = 'tear'; z.t = .6; } } }
+      else { z.x += dx / d * st; z.y += dy / d * st; z.z += dz / d * st; if (!climbing) z.yaw = Math.atan2(dx, dz); }
+      moving = true;
+    } else if (z.state === 'tear') {
+      z.yaw = Math.atan2(-z.win.ox, -z.win.oz);
+      if (z.win.boards <= 0 || z.type === 'echo') { z.state = 'vault'; z.t = 0; }   // echoes phase straight through the boards
+      else { z.t -= dt; if (z.t <= 0) { setBoards(z.win, z.win.boards - 1); z.t = ROUNDS.tearTime(G.round); if (Math.hypot(z.x - P.x, z.z - P.z) < 18) SFX.board(); } }
+    } else if (z.state === 'vault') {
+      z.t += dt / .9; const w = z.win, k = Math.min(1, z.t);
+      z.x = lerp(w.out.x, w.inn.x, k); z.z = lerp(w.out.z, w.inn.z, k); z.y = w.y + Math.sin(k * Math.PI) * .95;
+      if (k >= 1) { z.state = 'chase'; z.y = w.y; z.vy = 0; z.inside = true; z.node = -1; z.think = 0; z.sx = z.x; z.sz = z.z; if (time - (G.stingT || -9) > 7 && Math.hypot(z.x - P.x, z.z - P.z) < 14) { G.stingT = time; SFX.sting(); } }
+    } else if (z.state === 'ladder') {
+      const m = NODES[z.cl], dy = m.y - z.y, hd = Math.hypot(m.x - z.x, m.z - z.z), st = 2.2 * dt; climbing = true;
+      if (dy < 0 && hd > .12 && z.clTop) { z.x = lerp(z.x, m.x, .2); z.z = lerp(z.z, m.z, .2); }          // going down: get over the shaft first
+      else { z.clTop = false; if (Math.abs(dy) <= st) { z.x = m.x; z.y = m.y; z.z = m.z; z.vy = 0; z.state = 'chase'; z.node = z.cl; z.think = 0; z.sx = z.x; z.sz = z.z; }
+        else { z.y += Math.sign(dy) * st; if (dy > 0 && dy < .5) { z.x = lerp(z.x, m.x, .25); z.z = lerp(z.z, m.z, .25); } } }
+    } else if (z.state === 'chase') {
+      if (DBG.notarget) { moveEntity(z, 0, 0, dt, CFG.zombie.r, 'a', CFG.zombie.h); z.g.position.set(z.x, z.y, z.z); continue; }
+      const TG = NET.target(z);
+      const pdx = TG.x - z.x, pdz = TG.z - z.z, pdy = TG.y - z.y, dist = Math.hypot(pdx, pdz);
+      z.think -= dt;
+      if (z.think <= 0) {
+        z.think = .18 + rand() * .1;
+        z.direct = Math.abs(pdy) < 1.0 && dist < 16 && los(z.x, z.y + .6, z.z, TG.x, TG.y + .6, TG.z);
+        if (!z.direct && z.node < 0) z.node = nearestNode(z.x, z.y, z.z, true);
+        if (z.direct) z.node = -1;
+      }
+      z.stuckT -= dt;
+      if (z.stuckT <= 0) { z.stuckT = 1.2; if (!z.direct && z.wind <= 0 && Math.hypot(z.x - z.sx, z.z - z.sz) < .25) z.node = nearestNode(z.x, z.y, z.z, true); z.sx = z.x; z.sz = z.z; }
+      let tx = TG.x, tz = TG.z;
+      if (!z.direct && z.node >= 0) {
+        let n = NODES[z.node];
+        if (Math.hypot(n.x - z.x, n.z - z.z) < .45 && Math.abs(n.y - z.y) < 1) { const nx = NEXT[z.node][TG.node]; if (nx >= 0 && nx !== z.node) { const m = NODES[nx]; if (Math.abs(m.y - n.y) > 1.2 && Math.hypot(m.x - n.x, m.z - n.z) < 1.3) { z.state = 'ladder'; z.cl = nx; z.clTop = m.y < n.y; } z.node = nx; n = m; tx = n.x; tz = n.z; } }
+        else { tx = n.x; tz = n.z; }
+      }
+      z.atk -= dt; z.stag = (z.stag || 0) - dt;
+      if (z.wind > 0) { z.wind -= dt; if (z.wind <= 0) { if (dist < 1.35 && Math.abs(pdy) < 1.4) NET.hurt(TG, z.type === 'echo' ? ROUNDS.nightDmg : CFG.zombie.dmg); z.atk = .9; } }
+      else if (z.direct && dist < 1.0 && Math.abs(pdy) < 1.3 && z.atk <= 0) z.wind = .42;
+      else {
+        const dx = tx - z.x, dz = tz - z.z, d = Math.hypot(dx, dz);
+        if (d > .05) { z.yaw = Math.atan2(dx, dz); const st = z.stag > 0 ? 0 : Math.min(d, z.speed * (z.direct && dist < 3.2 ? (z.type === 'echo' ? 2.4 : z.speed < 2 ? 1.7 : 1) : 1) * (z.type === 'echo' && G.outK > .5 ? 2 : 1) * dt); if (!(z.direct && dist < .75)) { moveEntity(z, dx / d * st, dz / d * st, dt, CFG.zombie.r, 'a', CFG.zombie.h); moving = true; } }
+        if (!moving) moveEntity(z, 0, 0, dt, CFG.zombie.r, 'a', CFG.zombie.h);
+      }
+      if (dist < 12) groanV = Math.max(groanV, .1 * (1 - dist / 12));
+    }
+    // pose
+    z.g.position.set(z.x, z.y, z.z); z.g.rotation.y = z.yaw;
+    const sw = moving ? Math.sin(z.phase) * .6 : 0;
+    p.lL.rotation.x = sw; p.lR.rotation.x = -sw;
+    if (climbing) { p.aL.rotation.x = p.aR.rotation.x = -2.8 + Math.sin(z.phase) * .3; }
+    else if (z.state === 'tear') { p.aL.rotation.x = -1.6 + Math.sin(z.phase * 2) * .5; p.aR.rotation.x = -1.6 + Math.cos(z.phase * 2) * .5; }
+    else if (z.wind > 0) { p.aL.rotation.x = p.aR.rotation.x = -2.4 + (.42 - z.wind) * 4; }
+    else { p.aL.rotation.x = -1.45 + Math.sin(z.phase * .5) * .12; p.aR.rotation.x = -1.3 + Math.cos(z.phase * .5) * .12; }
+    if (z.type === 'echo') z.g.visible = Math.sin(time * 40 + z.phase) > -.7;
+  }
+  // separation
+  for (let i = 0; i < zombies.length; i++) { const a = zombies[i]; if (a.state !== 'chase') continue; for (let j = i + 1; j < zombies.length; j++) { const b = zombies[j]; if (b.state !== 'chase' || Math.abs(a.y - b.y) > 1) continue; const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz); if (d < .62 && d > .001) { const p = (.62 - d) / d * .5; a.x -= dx * p; a.z -= dz * p; b.x += dx * p; b.z += dz * p; } } }
+  if (groanV > 0 && rand() < dt * .9) SFX.groan(groanV);
+}
+
+/* =====================================================================
+   10. PLAYER, WEAPONS, VIEWMODEL
+   ===================================================================== */
+const keys = {}, mouse = { down: false, fresh: false, right: false };
+// Ladders: stand in the shaft and hold W to climb, S to descend (W also descends if you are looking down). Step off at the top.
+const LADDERS = [{ x0: 34.5, x1: 35.6, z0: -15.6, z1: -14.5, y0: UP, y1: 6.9 }];
+function ladderMove(dt, fwd) {
+  const l = LADDERS.find(q => P.x > q.x0 - .1 && P.x < q.x1 + .1 && P.z > q.z0 - .1 && P.z < q.z1 + .1 && P.y >= q.y0 - .05 && P.y <= q.y1 + .3);
+  if (!l) return false;
+  const dir = fwd * (P.pitch < -.7 ? -1 : 1);
+  if (P.y <= l.y0 + .02 && dir <= 0) return false;                       // at the foot and not climbing: walk normally
+  const k = P.y >= l.y1 - .02 ? 1 : .2;                                    // free to step off only at the top
+  P.x += P.vx * dt * k; P.z += P.vz * dt * k; collide(P, CFG.player.r, 'p', CFG.player.h);
+  P.y = clamp(P.y + dir * 2.8 * dt, l.y0, l.y1); P.vy = 0; P.onGround = true;
+  if (dir && ((P.y * 3.3) | 0) !== (((P.y - dir * 2.8 * dt) * 3.3) | 0)) SFX.step();
+  return true;
+}
+const VM = { steel: new T.MeshLambertMaterial({ color: 0x2c3136 }), wood: new T.MeshLambertMaterial({ color: 0x6a4526 }), glove: new T.MeshLambertMaterial({ color: 0x1a1c1e }), glow: new T.MeshBasicMaterial({ color: 0x9fd8ff }) };
+const gunRoot = new T.Group(); vmScene.add(gunRoot);
+let gun = null;
+const flashMesh = new T.Mesh(new T.PlaneGeometry(.22, .22), new T.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: .95, blending: T.AdditiveBlending, depthWrite: false })); flashMesh.visible = false;
+const beam = new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(), new T.Vector3()]), new T.LineBasicMaterial({ color: 0x9fd8ff })); beam.visible = false; beam.frustumCulled = false; scene.add(beam);
+let flashT = 0, beamT = 0;
+function setGun() {
+  if (gun) gunRoot.remove(gun);
+  const id = P.weapons[P.cur].id, d = WEAPONS[id].vm, L = d.len, g = new T.Group();
+  const add = (w, h, dp, x, y, z, mat, rx) => { const m = new T.Mesh(new T.BoxGeometry(w, h, dp), mat); m.position.set(x, y, z); if (rx) m.rotation.x = rx; g.add(m); return m; };
+  add(.05, .07, L * .55, 0, 0, -L * .275, VM.steel);
+  add(.022, .022, L * .5, 0, .014, -L * .75, id === 'funk' ? VM.glow : VM.steel);
+  add(.04, .11, .05, 0, -.08, -.03, d.wood ? VM.wood : VM.steel, .25);
+  add(.075, .07, .1, 0, -.1, -.02, VM.glove, .25);
+  if (d.mag) add(.03, d.mag, .05, 0, -.035 - d.mag / 2, -L * .33, VM.steel);
+  if (d.stock) add(.045, .085, .32, 0, -.025, .14, d.wood ? VM.wood : VM.steel);
+  if (d.wood) add(.052, .045, L * .38, 0, -.022, -L * .52, VM.wood);
+  g.add(flashMesh); flashMesh.position.set(0, .014, -L - .08);
+  gun = g; gunRoot.add(g);
+}
+function giveWeapon(id) {
+  const d = WEAPONS[id], have = P.weapons.findIndex(w => w.id === id);
+  if (have >= 0) { P.weapons[have].mag = d.mag; P.weapons[have].res = d.res; return; }
+  const w = { id, mag: d.mag, res: d.res };
+  if (P.weapons.length < 2) { P.weapons.push(w); P.cur = P.weapons.length - 1; } else P.weapons[P.cur] = w;
+  P.reloadT = 0; P.switchT = .45; setGun();
+}
+function swapWeapon(i) { if (P.weapons.length < 2) return; if (i === undefined) i = 1 - P.cur; if (i === P.cur || i >= P.weapons.length) return; P.cur = i; P.reloadT = 0; P.switchT = .45; setGun(); }
+function startReload() { const w = P.weapons[P.cur], d = WEAPONS[w.id]; if (P.reloadT > 0 || w.mag >= d.mag || w.res <= 0) return; P.reloadT = d.reload; SFX.reload(); }
+function aimBasis() {
+  const cy = Math.cos(P.yaw), sy = Math.sin(P.yaw), cp = Math.cos(P.pitch), sp = Math.sin(P.pitch);
+  const f = [-sy * cp, sp, -cy * cp], r = [cy, 0, -sy], u = [-r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1]];
+  return { f, r, u };
+}
+function tryFire() {
+  const w = P.weapons[P.cur], d = WEAPONS[w.id];
+  if (P.fireT > 0 || P.reloadT > 0 || P.switchT > 0) return;
+  if (w.mag <= 0) { if (w.res > 0) startReload(); else { SFX.click(); P.fireT = .25; } return; }
+  if (!DBG.ammo) w.mag--; P.fireT = 60 / d.rpm; P.kick = Math.min(.3, P.kick + d.kick); P.pitch = Math.min(1.5, P.pitch + d.kick * .12);
+  SFX.shot(d); flashT = .05; flashMesh.rotation.z = rand() * 6.28; muzzleLight.position.set(P.x, P.eyeY + P.y, P.z);
+  const B = aimBasis(), ox = P.x, oy = P.y + P.eyeY, oz = P.z, moving = Math.hypot(P.vx, P.vz) > 1 ? 1.4 : 1, spr = d.spread * lerp(1, .3, P.ads) * moving;
+  for (let k = 0; k < d.pellets; k++) {
+    const a = rand() * 6.283, m = Math.sqrt(rand()) * spr, sx = Math.cos(a) * m, sy = Math.sin(a) * m;
+    let dx = B.f[0] + B.r[0] * sx + B.u[0] * sy, dy = B.f[1] + B.r[1] * sx + B.u[1] * sy, dz = B.f[2] + B.r[2] * sx + B.u[2] * sy; const l = Math.hypot(dx, dy, dz); dx /= l; dy /= l; dz /= l;
+    const tW = rayWorld(ox, oy, oz, dx, dy, dz, 's', 120), hits = [];
+    for (let i = 0; i < zombies.length; i++) { const z = zombies[i]; if (z.state === 'dying') continue;
+      const th = raySphere(ox, oy, oz, dx, dy, dz, z.x, z.y + 1.6, z.z, .21), tb = rayBox(ox, oy, oz, dx, dy, dz, { x0: z.x - .3, x1: z.x + .3, y0: z.y, y1: z.y + 1.46, z0: z.z - .3, z1: z.z + .3 });
+      const t = Math.min(th, tb); if (t < tW) hits.push({ z, t, head: th <= tb }); }
+    hits.sort((p, q) => p.t - q.t);
+    for (let i = 0; i < hits.length && i < d.pierce; i++) damageZombie(hits[i].z, d.dmg * (w.up ? 2.5 : 1) * Math.pow(.75, i) * (hits[i].head ? d.head : 1), hits[i].head, 'gun');
+    const end = hits.length >= d.pierce ? hits[d.pierce - 1].t : tW;
+    if (hits.length < d.pierce && tW < 119) burst(ox + dx * tW, oy + dy * tW, oz + dz * tW, 0xb9b9b0, 3, 1.5);
+    if (d.beam) { const p = beam.geometry.attributes.position; p.setXYZ(0, ox + B.r[0] * .15 - B.u[0] * .12, oy - .12, oz + B.r[2] * .15 - B.u[2] * .12); p.setXYZ(1, ox + dx * end, oy + dy * end, oz + dz * end); p.needsUpdate = true; beam.visible = true; beamT = .12; }
+  }
+  if (w.mag === 0 && w.res > 0) P.autoReload = .25;
+}
+function knife() {
+  if (P.knifeT > 0) return; P.knifeT = .55; SFX.knife();
+  const B = aimBasis(); let best = null, bd = 2.1;
+  const ey = P.y + 1.2;
+  zombies.forEach(z => { if (z.state === 'dying') return; const dx = z.x - P.x, dz = z.z - P.z, d = Math.hypot(dx, dz); if (d >= bd || Math.abs(z.y - P.y) >= 1.5 || (dx * B.f[0] + dz * B.f[2]) / (d || 1) <= .45) return;
+    const dy = z.y + 1.2 - ey, l = Math.hypot(dx, dy, dz) || 1; if (rayWorld(P.x, ey, P.z, dx / l, dy / l, dz / l, 's', l) < l - .05) return;   // no stabbing through walls
+    bd = d; best = z; });
+  if (best) {
+    // lunge only at zombies already inside the building, in short collision-checked steps, so it can never carry the player through a wall or window
+    if (best.inside && !DBG.noclip) { let left = Math.max(0, bd - .9); const dx = (best.x - P.x) / (bd || 1), dz = (best.z - P.z) / (bd || 1); while (left > 0) { const st = Math.min(.15, left); P.x += dx * st; P.z += dz * st; collide(P, CFG.player.r, 'p', CFG.player.h); left -= st; } }
+    damageZombie(best, 150, false, 'knife');
+  }
+}
+function throwGrenade() {
+  if (P.gren <= 0) return; if (!DBG.ammo) P.gren--;
+  const B = aimBasis(), m = new T.Mesh(new T.CylinderGeometry(.04, .04, .3, 6), M.wood); scene.add(m);
+  grenades.push({ m, x: P.x + B.f[0] * .5, y: P.y + P.eyeY - .1, z: P.z + B.f[2] * .5, vx: B.f[0] * 13, vy: B.f[1] * 13 + 3, vz: B.f[2] * 13, t: 2.4 });
+}
+function updateGrenades(dt) {
+  for (let i = grenades.length - 1; i >= 0; i--) {
+    const g = grenades[i]; g.t -= dt; g.vy -= 18 * dt;
+    const e = { x: g.x + g.vx * dt, y: g.y, z: g.z + g.vz * dt }, bx = e.x, bz = e.z; collide(e, .08, 'p', .1);
+    if (Math.abs(e.x - bx) > 1e-4) g.vx *= -.35; if (Math.abs(e.z - bz) > 1e-4) g.vz *= -.35;
+    g.x = e.x; g.z = e.z; g.y += g.vy * dt;
+    const gr = groundAt(g.x, g.z, g.y, 'p'); if (g.y <= gr + .05) { g.y = gr + .05; g.vy = -g.vy * .3; g.vx *= .6; g.vz *= .6; }
+    g.m.position.set(g.x, g.y, g.z); g.m.rotation.x += dt * 9;
+    if (g.t <= 0) {
+      SFX.boom(); burst(g.x, g.y + .3, g.z, 0xffa040, 26, 8); flash(.25);
+      zombies.forEach(z => { const d = Math.hypot(z.x - g.x, z.y + 1 - g.y, z.z - g.z); if (d < 5.5) damageZombie(z, 900 * (1 - d / 6.5), false, 'nade'); });
+      const pd = Math.hypot(P.x - g.x, P.y + 1 - g.y, P.z - g.z); if (pd < 3.5) hurtPlayer(70 * (1 - pd / 4));
+      scene.remove(g.m); grenades.splice(i, 1);
+    }
+  }
+}
+function hurtPlayer(d) {
+  if ((G.state !== 'playing' && !NET.mode) || DBG.god || P.down) return;
+  P.hp -= d; P.lastHit = time; SFX.hurt();
+  if (P.hp <= 0) NET.died();
+}
+function updatePlayer(dt) {
+  const B = aimBasis(), fwd = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0), str = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
+  const sprint = (keys.ShiftLeft || keys.ShiftRight) && fwd > 0 && !mouse.right && P.reloadT <= 0 && !P.winded;
+  if (sprint) { P.stam -= dt / 6; if (P.stam <= 0) { P.winded = true; SFX.pant(); } } else { P.stam = Math.min(1, P.stam + dt / 2.5); if (P.winded && P.stam > .4) P.winded = false; }
+  let wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str; const wl = Math.hypot(wx, wz);
+  const sp = (sprint ? CFG.player.sprint : CFG.player.walk) * lerp(1, .6, P.ads) * (G.night ? ROUNDS.nightPlayerSpeed : 1);
+  if (wl > 0) { wx = wx / wl * sp; wz = wz / wl * sp; }
+  const acc = Math.min(1, dt * 12); P.vx = lerp(P.vx, wx, acc); P.vz = lerp(P.vz, wz, acc);
+  if (keys.Space && P.onGround) { P.vy = CFG.player.jump; P.onGround = false; }
+  if (keys.ArrowLeft) P.yaw += dt * 2.2; if (keys.ArrowRight) P.yaw -= dt * 2.2;
+  if (DBG.noclip) { const up = (keys.Space ? 1 : 0) - (keys.ControlLeft || keys.KeyC ? 1 : 0), v = (keys.ShiftLeft ? 16 : 7) * dt; P.x += (B.f[0] * fwd + B.r[0] * str) * v; P.y += (B.f[1] * fwd + up) * v; P.z += (B.f[2] * fwd + B.r[2] * str) * v; P.vx = P.vz = P.vy = 0; P.onGround = false; P.camY = P.y; }
+  else if (!ladderMove(dt, fwd)) moveEntity(P, P.vx * dt, P.vz * dt, dt, CFG.player.r, 'p', CFG.player.h);
+  if (P.y < -5 && !DBG.noclip) { P.x = 8; P.y = 0; P.z = 9.5; P.vy = 0; }
+  if (!G.night && time - P.lastHit > CFG.player.regenDelay) P.hp = Math.min(CFG.player.hp, P.hp + CFG.player.regenRate * dt);
+  // weapons
+  const w = P.weapons[P.cur], d = WEAPONS[w.id];
+  P.fireT -= dt; P.knifeT -= dt; P.switchT -= dt; P.kick = Math.max(0, P.kick - dt * 1.2);
+  if (P.autoReload > 0) { P.autoReload -= dt; if (P.autoReload <= 0) startReload(); }
+  if (P.reloadT > 0) { P.reloadT -= dt; if (P.reloadT <= 0) { const n = Math.min(d.mag - w.mag, w.res); w.mag += n; w.res -= n; } }
+  if (mouse.down && !sprint && (d.auto || mouse.fresh)) tryFire();
+  mouse.fresh = false;
+  P.ads = lerp(P.ads, mouse.right && P.reloadT <= 0 && !sprint ? 1 : 0, Math.min(1, dt * 14));
+  // camera
+  const moveAmt = Math.hypot(P.vx, P.vz); if (P.onGround) P.bob += dt * moveAmt * 1.9;
+  { const si = Math.floor(P.bob / Math.PI); if (si !== P.stepI) { P.stepI = si; if (P.onGround && moveAmt > 1) SFX.step(); } }
+  P.eyeY = CFG.player.eye; P.camY = lerp(P.camY === undefined ? P.y : P.camY, P.y, Math.min(1, dt * 16));
+  if (Math.abs(P.camY - P.y) > 1.2) P.camY = P.y;
+  camera.position.set(P.x, P.camY + P.eyeY + Math.sin(P.bob) * .03 * Math.min(1, moveAmt / 4), P.z);
+  camera.rotation.set(P.pitch, P.yaw, 0);
+  camera.fov = lerp(75, d.zoom, P.ads) + (sprint ? 4 : 0); camera.updateProjectionMatrix();
+  // viewmodel
+  const low = P.reloadT > 0 ? Math.sin(Math.min(1, (d.reload - P.reloadT) / d.reload) * Math.PI) * .22 : P.switchT > 0 ? P.switchT * .6 : 0;
+  const kn = P.knifeT > .25 ? (P.knifeT - .25) / .3 : 0;
+  gunRoot.position.set(lerp(.2, 0, P.ads) + Math.cos(P.bob * .5) * .008 * (1 - P.ads) - kn * .12, lerp(-.19, -.108, P.ads) - low + Math.abs(Math.sin(P.bob)) * .008 * (1 - P.ads) - (sprint ? .04 : 0), lerp(-.42, -.3, P.ads) + P.kick * .5 - kn * .15);
+  gunRoot.rotation.set(P.kick * 1.2 - low * 1.5, (sprint ? .5 : 0) + kn * .6, 0);
+  flashT -= dt; flashMesh.visible = flashT > 0; muzzleLight.intensity = flashT > 0 ? 2.2 : 0;
+  beamT -= dt; if (beamT <= 0) beam.visible = false;
+}
+
+/* =====================================================================
+   11. INTERACTION, PURCHASES, POWER-UPS
+   ===================================================================== */
+function spend(c) { if (G.points < c) { SFX.deny(); return false; } G.points -= c; SFX.buy(); return true; }
+function addPoints(n) { n *= G.dbl > 0 ? 2 : 1; if (NET.credit) { NET.earn[NET.credit] = (NET.earn[NET.credit] || 0) + n; return; } G.points += n; const e = $('h-gain'); e.textContent = '+' + n; e.classList.remove('on'); void e.offsetWidth; e.classList.add('on'); }
+function near(x, y, z, r) { return Math.abs(P.y - y) < 1.6 && Math.hypot(P.x - x, P.z - z) < r; }
+let prompt = null;
+function findPrompt() {
+  prompt = null;
+  { const bp = buildablePrompt() || mapPrompt(); if (bp) return prompt = bp; }
+  if (!G.open.doorA && near(16, 0, 11.8, 2)) return prompt = { text: `<b>F</b> Open door to Storage <b>[${CFG.cost.doorA}]</b>`, act: () => { if (spend(CFG.cost.doorA)) { G.open.doorA = true; doorA.off = true; doorA.mesh.visible = false; buildNav(); } } };
+  if (!G.open.debris && near(15, P.y, 3.4, 1.9) && Math.abs(P.x - 15) < 1) return prompt = { text: `<b>F</b> Clear stair debris <b>[${CFG.cost.debris}]</b>`, act: () => { if (spend(CFG.cost.debris)) { G.open.debris = true; debris.off = true; debrisGroup.visible = false; buildNav(); } } };
+  for (const b of WALLBUYS) if (near(b.x + b.nx * .9, b.y - 1.5, b.z + b.nz * .9, 1.5)) {
+    const d = WEAPONS[b.id], own = P.weapons.some(w => w.id === b.id), c = own ? d.cost / 2 : d.cost;
+    return prompt = { text: `<b>F</b> ${own ? 'Ammo for' : 'Buy'} ${d.name} <b>[${c}]</b>`, act: () => { if (spend(c)) giveWeapon(b.id); } };
+  }
+  if (near(crate.ix, crate.y, crate.iz, 1.7)) {
+    if (crate.state === 'idle') return prompt = { text: `<b>F</b> Open the 935 crate <b>[${CFG.cost.crate}]</b>`, act: () => { if (spend(CFG.cost.crate)) { crate.state = 'roll'; crate.t = 3; crate.uses++; crateGlow.visible = true; const pool = CRATE_POOL.filter(id => !P.weapons.some(w => w.id === id)); crate.pick = pool[Math.floor(rand() * pool.length)]; } } };
+    if (crate.state === 'roll') return prompt = { text: WEAPONS[CRATE_POOL[Math.floor(time * 12) % CRATE_POOL.length]].name + ' …' };
+    if (crate.state === 'ready') return prompt = { text: `<b>F</b> Take ${WEAPONS[crate.pick].name}`, act: () => { giveWeapon(crate.pick); SFX.buy(); crateDone(); } };
+  }
+  if (!G.gen && near(23.3, 0, 11.7, 1.5)) return prompt = { text: '<b>Hold F</b> Start the generator' + holdBar(2.5), holdDur: 2.5, holdAct: () => { G.gen = true; SFX.power(); SFX.boom(); banner('Generator running', 'The lights are back, until the next Night Round.', 4); } };
+  for (const m of medkits) if (near(m.x, m.y, m.z, 1.4)) return prompt = P.hp >= CFG.player.hp ? { text: 'Field dressing · you are not hurt' } : { text: '<b>F</b> Use field dressing', act: () => { P.hp = Math.min(CFG.player.hp, P.hp + ROUNDS.nightHeal); SFX.power(); scene.remove(m.g); medkits.splice(medkits.indexOf(m), 1); if (NET.mode === 'client') { NET.mkGone[m.id] = 1; NET.req('mk', m.id); } } };
+  for (const w of WINDOWS) if (w.boards < CFG.boards && near(w.inn.x, w.y, w.inn.z, 1.5)) return prompt = { text: '<b>Hold F</b> Rebuild barrier', hold: w };
+  prompt = lockedPrompt();
+}
+function interactHeld(dt) {
+  if (prompt && prompt.hold && (keys.KeyF || keys.KeyE)) { P.repairT += dt; if (P.repairT > .7) { P.repairT = 0; setBoards(prompt.hold, prompt.hold.boards + 1); if (NET.mode === 'client') NET.req('b', WINDOWS.indexOf(prompt.hold)); SFX.fix(); addPoints(CFG.pts.board); } } else P.repairT = 0;
+  if (prompt && prompt.holdAct && (keys.KeyF || keys.KeyE)) { const was = P.holdT || 0; P.holdT = was + dt; if (P.holdT >= prompt.holdDur) { P.holdT = 0; prompt.holdAct(); } else if (((P.holdT * 4) | 0) !== ((was * 4) | 0)) SFX.fix(); } else P.holdT = 0;
+}
+function dropPowerup(type, x, y, z) { const m = new T.Mesh(new T.BoxGeometry(.34, .34, .34), new T.MeshBasicMaterial({ color: POWERUPS[type].color })); scene.add(m); powerups.push({ type, x, y: y + .9, z, t: 26, m }); }
+function updatePowerups(dt) {
+  for (let i = powerups.length - 1; i >= 0; i--) {
+    const p = powerups[i]; p.t -= dt; p.m.position.set(p.x, p.y + Math.sin(time * 3) * .1, p.z); p.m.rotation.y += dt * 2; p.m.rotation.x += dt; p.m.visible = p.t > 6 || Math.sin(time * 14) > 0;
+    if (Math.hypot(P.x - p.x, P.z - p.z) < 1 && Math.abs(P.y + .9 - p.y) < 1.4) {
+      if (NET.mode === 'client') { if (!p.asked) { p.asked = true; NET.req('pu', p.id); } continue; }
+      applyPowerup(p.type); if (NET.mode === 'host') NET.ev('pu', p.type);
+      p.t = 0;
+    }
+    if (p.t <= 0) { scene.remove(p.m); powerups.splice(i, 1); }
+  }
+}
+
+/* =====================================================================
+   12. ROUND DIRECTOR
+   ===================================================================== */
+/* ---- BUILDABLE: the door crank. Three parts (one per area), built at the Start Room workbench, fitted to the blast door. ---- */
+const PARTS = [
+  { id: 'handle', name: 'crank handle', spots: [[13.5, .92, .8], [1.6, .14, 11.2], [8.7, .98, 6.75]] },             // Start Room
+  { id: 'gear',   name: 'gear housing', spots: [[24.5, 1.12, 9.3], [17, .14, 2.7], [25.2, .14, 12.3]] },            // Storage
+  { id: 'chain',  name: 'drive chain',  spots: [[5.8, UP + 1.02, 12.1], [23.8, UP + .64, 6.4], [2.5, UP + .16, 2.5]] }, // Radio Room / rooftop
+];
+{ const pm = new T.MeshLambertMaterial({ color: 0x8a7a4a, emissive: 0x3a2c08 }), pk = new T.MeshLambertMaterial({ color: 0x2a2d30, emissive: 0x2a2208 });
+  const mk = { handle: () => { const g = new T.Group(), a = new T.Mesh(new T.BoxGeometry(.38, .05, .05), pk), b = new T.Mesh(new T.BoxGeometry(.05, .16, .05), pm); b.position.set(.17, .08, 0); g.add(a); g.add(b); return g; },
+    gear: () => { const g = new T.Group(); g.add(new T.Mesh(new T.CylinderGeometry(.16, .16, .1, 10), pm)); const h = new T.Mesh(new T.CylinderGeometry(.05, .05, .16, 8), pk); g.add(h); return g; },
+    chain: () => { const g = new T.Group(), t = new T.Mesh(new T.TorusGeometry(.15, .03, 6, 14), pk); t.rotation.x = Math.PI / 2; g.add(t); const u = new T.Mesh(new T.TorusGeometry(.09, .025, 6, 12), pm); u.rotation.x = Math.PI / 2; u.position.y = .04; g.add(u); return g; } };
+  PARTS.forEach(p => { p.mesh = mk[p.id](); scene.add(p.mesh); }); }
+addBox(8.2, 9.8, 0, .9, 12.3, 13, M.wood);
+{ const v = new T.Mesh(new T.BoxGeometry(.22, .18, .3), IRON); v.position.set(8.5, .99, 12.6); scene.add(v); }
+const crankModel = new T.Group(); { const a = new T.Mesh(new T.CylinderGeometry(.14, .14, .12, 10), IRON), b = new T.Mesh(new T.BoxGeometry(.42, .05, .05), IRON); b.position.set(.2, .08, 0); crankModel.add(a); crankModel.add(b); crankModel.position.set(9.2, .97, 12.6); scene.add(crankModel); }
+const partCount = () => PARTS.reduce((n, p) => n + (G.parts[p.id] ? 1 : 0), 0);
+const holdBar = d => P.holdT > 0 ? '  ' + '▮'.repeat(Math.ceil(P.holdT / d * 10)) + '▯'.repeat(10 - Math.ceil(P.holdT / d * 10)) : '';
+function resetBuildable() { G.parts = {}; G.crank = false; crankModel.visible = false; blastDoor.off = false; blastDoor.mesh.visible = true; PARTS.forEach(p => { p.pos = p.spots[Math.floor(rand() * p.spots.length)]; p.mesh.position.set(p.pos[0], p.pos[1], p.pos[2]); p.mesh.visible = true; }); }
+function openBlast() { G.open.blast = true; blastDoor.off = true; blastDoor.mesh.visible = false; crankModel.visible = false; buildNav(); SFX.boom(); banner('Airfield unlocked', 'The blast door is open. It opens both ways.', 4.5); }
+function buildablePrompt() {
+  for (const p of PARTS) if (!G.parts[p.id] && near(p.pos[0], p.pos[1], p.pos[2], 1.5)) return { text: `<b>F</b> Pick up the ${p.name}`, act: () => { G.parts[p.id] = true; p.mesh.visible = false; SFX.buy(); banner('Part found', partCount() + ' of 3 for the door crank', 2.4); } };
+  if (!G.crank && near(9, 0, 11.8, 1.6)) { const n = 3 - partCount(); return n > 0 ? { text: `Workbench · the door crank needs ${n} more part${n === 1 ? '' : 's'}` } : { text: '<b>Hold F</b> Build the door crank' + holdBar(2.5), holdDur: 2.5, holdAct: () => { G.crank = true; crankModel.visible = true; SFX.buy(); banner('Door crank built', 'Fit it to the blast door in the north wall.', 4); } }; }
+  if (!G.open.blast && P.y < 1.6 && Math.hypot(P.x - 7.5, P.z - .3) < 1.9) return !G.crank ? { text: 'Blast door to the airfield · the hand crank is missing' } : { text: '<b>Hold F</b> Crank the blast door open' + holdBar(3), holdDur: 3, holdAct: openBlast };
+  return null;
+}
+const linkedCount = () => PADS.reduce((n, pd) => n + (pd.linked ? 1 : 0), 0);
+function warp(x, y, z) { P.x = x; P.y = P.camY = y; P.z = z; P.vy = 0; P.vx = P.vz = 0; flash(.8); SFX.zap(); G.tpCool = 4; }
+function powerOn() { G.open.mains = true; tunnelDoor.off = basementDoor.off = true; tunnelDoor.mesh.visible = basementDoor.mesh.visible = false; switchLamp.material.color.setHex(0x58c36a); buildNav(); SFX.boom(); SFX.power(); banner('Main power on', 'The cellar blast door and the service tunnel are open. Teleporters are live.', 5.5); }
+function resetMap() {
+  [depotGate, towerGate, flugDoor, tunnelDoor, basementDoor].forEach(d => { d.off = false; d.mesh.visible = true; });
+  PADS.forEach(pd => pd.linked = false); G.linkPad = -1; G.lastPad = -1; G.linkT = 0; G.tpCool = 0; switchLamp.material.color.setHex(0xbd2a20);
+}
+function updateMap(dt) {
+  G.tpCool -= dt;
+  if (G.linkPad >= 0) { G.linkT -= dt; if (G.linkT <= 0) { G.linkPad = -1; SFX.deny(); banner('Link lost', 'Start it again at the teleporter.', 3); } }
+  const blink = Math.sin(time * 8) > 0;
+  PADS.forEach((pd, i) => pd.mesh.material.color.setHex(pd.linked ? 0x9fd8ff : G.linkPad === i ? (blink ? 0xe4a437 : 0x6b5320) : G.open.mains ? 0x8a8f94 : 0x3a4046));
+  const n = linkedCount(); MAINPAD.mesh.material.color.setHex(n ? 0x9fd8ff : 0x3a4046); mainGlow.material.color.setHex(n >= 3 ? 0x9fd8ff : n ? 0xe4a437 : 0x66757f); upGlow.material.color.setHex(n >= 3 ? 0x9fd8ff : 0x66757f);
+  flood.intensity = G.open.mains ? G.power * 1.1 : 0; atcBeacon.visible = G.open.mains && Math.sin(time * 3) > 0;
+}
+function mapPrompt() {
+  const hy = (x, z) => Math.hypot(P.x - x, P.z - z);
+  if (!G.open.depot && P.y < 3 && hy(-14, -12) < 2.4) return { text: '<b>F</b> Open the fuel depot gate <b>[1250]</b>', act: () => { if (spend(1250)) { G.open.depot = true; depotGate.off = true; depotGate.mesh.visible = false; buildNav(); } } };
+  if (!G.open.tower && P.y < 3 && hy(-24, -22) < 2.4) return { text: '<b>F</b> Open the command post gate <b>[1000]</b>', act: () => { if (spend(1000)) { G.open.tower = true; towerGate.off = true; towerGate.mesh.visible = false; buildNav(); } } };
+  if (!G.open.flug && P.y < 3 && hy(30.2, -15) < 2.2) return { text: '<b>F</b> Unlock the Flugleitung <b>[1500]</b>', act: () => { if (spend(1500)) { G.open.flug = true; flugDoor.off = true; flugDoor.mesh.visible = false; buildNav(); } } };
+  if (!G.open.mains && P.y < -1 && hy(41.8, -10.6) < 1.8) return { text: '<b>Hold F</b> Throw the main power switch' + holdBar(2), holdDur: 2, holdAct: powerOn };
+  for (let i = 0; i < PADS.length; i++) { const pd = PADS[i]; if (P.y > 2 || hy(pd.x, pd.z) > 1.5) continue;
+    if (!G.open.mains) return { text: 'Teleporter · no power' };
+    if (pd.linked) return G.tpCool > 0 ? { text: 'Teleporter · recharging' } : { text: '<b>F</b> Teleport to the annex <b>[1500]</b>', act: () => { if (spend(1500)) { G.lastPad = i; warp(MAINPAD.x, MAINPAD.y, MAINPAD.z); } } };
+    if (G.linkPad === i) return { text: `Linking · reach the mainframe in the annex (${Math.ceil(G.linkT)}s)` };
+    return { text: '<b>F</b> Start the link to the mainframe', act: () => { G.linkPad = i; G.linkT = 75; SFX.power(); banner('Link started', 'Get to the mainframe in the annex lab. 75 seconds.', 4); } }; }
+  if (P.y < 2 && hy(48, 11.7) < 1.8) {
+    if (G.linkPad >= 0) return { text: `<b>F</b> Link the ${PADS[G.linkPad].name} teleporter`, act: () => { const pd = PADS[G.linkPad]; pd.linked = true; G.lastPad = G.linkPad; G.linkPad = -1; SFX.buy(); const n = linkedCount(); banner(n >= 3 ? 'Mainframe online' : 'Teleporter linked', n >= 3 ? 'All three pads are linked. The Aufrüster is live.' : n + ' of 3 linked to the mainframe', 4); } };
+    const n = linkedCount(); if (!n) return { text: 'Mainframe · 0 of 3 teleporters linked' };
+    const back = G.lastPad >= 0 && PADS[G.lastPad].linked ? G.lastPad : PADS.findIndex(pd => pd.linked);
+    return G.tpCool > 0 ? { text: `Mainframe · ${n} of 3 linked · recharging` } : { text: `<b>F</b> Teleport to ${PADS[back].name}  ·  ${n} of 3 linked`, act: () => warp(PADS[back].x, PADS[back].y, PADS[back].z) };
+  }
+  if (P.y < 2 && hy(51.7, 12) < 1.7) { const n = linkedCount(), w = P.weapons[P.cur];
+    if (n < 3) return { text: `Aufrüster · needs all three teleporters linked (${n}/3)` };
+    if (w.up) return { text: 'Aufrüster · this weapon is already upgraded' };
+    return { text: `<b>F</b> Upgrade ${WEAPONS[w.id].name} <b>[5000]</b>`, act: () => { if (spend(5000)) { w.up = true; w.mag = WEAPONS[w.id].mag; w.res = WEAPONS[w.id].res; SFX.power(); banner('Weapon upgraded', WEAPONS[w.id].name + ' now hits two and a half times as hard.', 3.5); } } }; }
+  return null;
+}
+function zoneName() {
+  const x = P.x, z = P.z; if (P.y < -1) return x < 43.7 ? 'ATC Cellar' : 'Lab Tunnel';
+  if (x >= -.4 && x <= 26.4 && z >= -.4 && z <= 13.4) return P.y > 3 && x < 4.7 ? 'Rooftop' : P.y > 3 && x > 21 && z < 5 ? 'Stair Landing' : P.y > 3 ? 'Radio Room' : x < 16 ? 'Start Room' : 'Storage';
+  if (x >= 38 && z >= 9) return 'Annex Lab'; if (x > 26.4 && z > 10) return 'Service Tunnel'; if (x >= 30 && z <= -6 && z >= -24) return P.y > 6 ? 'Flugleitung · Control Cab' : P.y > 3 ? 'Flugleitung · Watch Room' : 'Flugleitung (ATC)';
+  if (x < -14) return z < -22 ? (x >= -33.5 && x <= -21.5 && z >= -39.5 && z <= -28.5 ? 'Command Post' : 'Command Post Yard') : 'Fuel Depot'; if (x >= 6.3 && x <= 17.5 && z >= -51.8 && z <= -48.2) return 'Me 323 Hold'; return 'Airfield';
+}
+function lockedPrompt() {
+  { const l = LADDERS.find(q => P.x > q.x0 - .5 && P.x < q.x1 + .5 && P.z > q.z0 - .5 && P.z < q.z1 + .5 && P.y >= q.y0 - .1 && P.y <= q.y1 + .3); if (l) return { text: P.y > l.y1 - .1 ? '<b>S</b> Climb down the ladder' : '<b>W</b> Climb the ladder' }; }
+  if (!G.open.mains && P.y < 1.6 && Math.hypot(P.x - 25.4, P.z - 12) < 1.5) return { text: 'Service tunnel door · no power' };
+  if (!G.open.mains && P.y < -1 && Math.hypot(P.x - 42.9, P.z + 9) < 1.5) return { text: 'Blast door to the lab tunnel · opens with main power' };
+  return null;
+}
+function lockedPromptOld() {   // signposts for zones that are designed but not built yet
+  if (P.y < 3 && Math.hypot(P.x - 29.2, P.z + 15) < 3) return { text: 'Hangar A · sealed. The doors run on power from the control tower.' };
+  if (P.y < 3 && Math.hypot(P.x + 13.3, P.z + 28) < 2.6) return { text: 'Gate to the control tower · chained' };
+  if (P.y < 1 && Math.hypot(P.x - 22, P.z - 3.5) < 1.1) return { text: 'Service tunnel hatch · bolted from below' };
+  return null;
+}
+const medkits = [], MK = { body: new T.MeshLambertMaterial({ color: 0x4d5a3a }), cross: new T.MeshBasicMaterial({ color: 0xe8e6df }) };
+function spawnMedkit(x, y, z) {
+  const g = new T.Group(); g.add(new T.Mesh(new T.BoxGeometry(.32, .2, .22), MK.body));
+  [.115, -.115].forEach(o => { const a = new T.Mesh(new T.BoxGeometry(.16, .05, .012), MK.cross), b = new T.Mesh(new T.BoxGeometry(.05, .16, .012), MK.cross); a.position.z = b.position.z = o; g.add(a); g.add(b); });
+  g.position.set(x, y + .35, z); scene.add(g); medkits.push({ x, y, z, g });
+}
+function clearMedkits() { medkits.forEach(m => scene.remove(m.g)); medkits.length = 0; }
+function placeNightMedkits() {
+  const c = []; for (let i = 0; i < NODES.length; i++) if (i !== playerNode && NDIST[playerNode][i] < Infinity) c.push(i);
+  for (let k = 0; k < ROUNDS.nightKits && c.length; k++) { const n = NODES[c.splice(Math.floor(rand() * c.length), 1)[0]]; spawnMedkit(n.x + (rand() - .5) * .8, n.y, n.z + (rand() - .5) * .8); }
+}
+function startRound(r, forceNight) {
+  if (P.down) NET.revive();
+  G.round = r; G.night = !!forceNight || ROUNDS.isNight(r); G.drops = 0; G.phase = 'fight';
+  G.toSpawn = G.night ? ROUNDS.nightCount(r) : ROUNDS.count(r); G.spawnT = G.night ? 6 : r === 1 ? ROUNDS.opening.firstDelay : 2.5;
+  G.pack = 0; G.packW = null; G.packN = 0;
+  if (G.night) { SFX.night(); banner('Night Round', 'Power is out. Wounds will not heal. Get indoors.', 5, true); placeNightMedkits(); } else { SFX.round(); banner('Round ' + r, r === 1 && !G.gen ? 'The lights are dead. Something is at the windows.' : '', r === 1 ? 4.5 : 2.6); }
+  P.gren = Math.min(4, P.gren + 2);
+}
+function updateRound(dt) {
+  if (G.phase === 'inter') { G.inter -= dt; if (G.inter <= 0) startRound(G.round + 1); return; }
+  const alive = zombies.reduce((n, z) => n + (z.state !== 'dying' ? 1 : 0), 0), r = G.round;
+  G.spawnT -= dt;
+  // the quiet before a pack: knocking on the boards and voices in the dark, so you hear them before you see them
+  if (!G.night && G.toSpawn > 0 && G.pack === 0 && G.spawnT > 0 && rand() < dt * (r === 1 ? .7 : .35)) { if (rand() < .6) SFX.board(); else SFX.groan(.05); }
+  if (G.toSpawn > 0 && alive < ROUNDS.maxAlive(r) && G.spawnT <= 0) {
+    if (G.night) { if (spawnEcho()) { G.toSpawn--; G.spawnT = ROUNDS.nightSpawnGap + rand() * 2; } else G.spawnT = .5; }
+    else {
+      if (G.pack <= 0) {   // open the next pack
+        const o = ROUNDS.opening; G.pack = Math.min(G.toSpawn, r === 1 && G.packN < o.plan.length ? o.plan[G.packN] : ROUNDS.packSize(r)); G.packW = null;
+        if (G.pack >= 4) SFX.horde();
+      }
+      const w = spawnZombie(false, G.packW);
+      if (w) {
+        G.packW = w; G.toSpawn--; G.pack--;
+        if (G.pack > 0) G.spawnT = ROUNDS.packGap;
+        else { const o = ROUNDS.opening; G.spawnT = r === 1 && G.packN < o.lulls.length ? o.lulls[G.packN] : ROUNDS.packLull(r); G.packN++; }
+      } else { G.spawnT = .25; G.packW = null; }
+    }
+  }
+  if (G.toSpawn === 0 && alive === 0) { G.phase = 'inter'; G.inter = G.night ? 9 : 7; if (G.night) { G.night = false; clearMedkits(); banner('Power restored', '', 2.5); } }
+}
+
+/* =====================================================================
+   13. FX + HUD
+   ===================================================================== */
+const fxGeo = new T.BoxGeometry(.06, .06, .06), fxMats = {};
+function burst(x, y, z, color, n, sp) {
+  const mat = fxMats[color] || (fxMats[color] = new T.MeshBasicMaterial({ color }));
+  for (let i = 0; i < n && fx.length < 140; i++) { const m = new T.Mesh(fxGeo, mat); m.position.set(x, y, z); scene.add(m); fx.push({ m, vx: (rand() - .5) * sp, vy: rand() * sp * .8, vz: (rand() - .5) * sp, t: .25 + rand() * .35 }); }
+}
+function updateFx(dt) { for (let i = fx.length - 1; i >= 0; i--) { const f = fx[i]; f.t -= dt; f.vy -= 9 * dt; f.m.position.x += f.vx * dt; f.m.position.y += f.vy * dt; f.m.position.z += f.vz * dt; if (f.t <= 0) { scene.remove(f.m); fx.splice(i, 1); } } }
+let hitT = 0, flashA = 0;
+function hitMarker(head) { if (NET.credit) return; hitT = .09; $('hitm').className = head ? 'head' : ''; }
+function flash(a) { flashA = Math.max(flashA, a); }
+function banner(big, sub, dur, night) { if (NET.mode === 'host') NET.ev('bn', big, sub, dur, night ? 1 : 0); const b = $('h-banner'); b.querySelector('.big').textContent = big; b.querySelector('.sub').textContent = sub; b.className = 'on' + (night ? ' night' : ''); bannerT = dur; }
+const hudCache = {};
+function setHud(id, v, html) { if (hudCache[id] === v) return; hudCache[id] = v; if (html) $(id).innerHTML = v; else $(id).textContent = v; }
+function updateHud(dt) {
+  const w = P.weapons[P.cur], d = WEAPONS[w.id];
+  setHud('h-round', G.round > 0 ? String(G.round) : '');
+  setHud('h-points', String(G.points));
+  setHud('h-weapon', d.name + (w.up ? ' ·935' : '') + (P.reloadT > 0 ? ' · reloading' : ''));
+  setHud('h-ammo', `${w.mag}<small> / ${w.res}</small>`, true);
+  setHud('h-gren', 'GRENADES ' + '◆'.repeat(P.gren) + '◇'.repeat(Math.max(0, 4 - P.gren)));
+  if (hudCache.night !== G.night) { hudCache.night = G.night; $('hud').classList.toggle('night', G.night); }
+  { const c = !G.night ? '' : P.hp > 66 ? 'fine' : P.hp > 33 ? 'caution' : 'danger'; if (hudCache.cond !== c) { hudCache.cond = c; const e = $('h-cond'); e.className = c; e.textContent = c ? 'Condition · ' + c : ''; } }
+  setHud('h-zone', (NET.mode ? 'CO-OP ' + (Object.keys(NET.remotes).length + 1) + ' · ' : '') + (DBG.noclip ? 'NOCLIP · ' : '') + (DBG.god ? 'GOD · ' : '') + zoneName() + (G.night ? (G.outK > .5 ? ' · exposed' : ' · no power') : G.gen ? '' : ' · lights out') + (G.open.blast ? '' : G.crank ? ' · door crank built' : ' · crank parts ' + partCount() + '/3'));
+  setHud('h-prompt', prompt ? prompt.text : '', true);
+  setHud('h-power', (G.insta > 0 ? `<span>INSTANT KILL ${Math.ceil(G.insta)}</span>` : '') + (G.dbl > 0 ? `<span>DOUBLE POINTS ${Math.ceil(G.dbl)}</span>` : '') + (G.linkPad >= 0 ? `<span>LINK ${PADS[G.linkPad].name.toUpperCase()} ${Math.ceil(G.linkT)}s</span>` : ''), true);
+  $('cross').style.opacity = String((1 - P.ads) * .85);
+  hitT -= dt; $('hitm').style.opacity = hitT > 0 ? '1' : '0';
+  $('vign').style.opacity = String(clamp(1 - P.hp / CFG.player.hp, 0, 1));
+  flashA = Math.max(0, flashA - dt * 1.5); $('flash').style.opacity = String(flashA);
+  if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('h-banner').classList.remove('on'); }
+}
+// Roofed interiors. At night everything else is "exposed": the fog closes to a few metres and echoes hunt twice as fast.
+function isIndoors() { const x = P.x, z = P.z; if (P.y < -1 || (x >= -33.5 && x <= -21.5 && z >= -39.5 && z <= -28.5)) return true; if (x >= -.4 && x <= 26.4 && z >= -.4 && z <= 13.4) return !(P.y > 3 && x < 4.7); return (x >= 6.3 && x <= 17.5 && z >= -51.8 && z <= -48.2) || (x >= 30 && x <= 44 && z >= -24 && z <= -6) || (x > 26.4 && x <= 54 && z >= 9 && z <= 25); }
+function updateWorld(dt) {
+  G.outK = lerp(G.outK || 0, G.night && !isIndoors() ? 1 : 0, Math.min(1, dt * 1.6));
+  G.insta -= dt; G.dbl -= dt; medkits.forEach(m => m.g.rotation.y += dt * 1.2);
+  G.power = lerp(G.power, G.night || !G.gen ? 0 : 1, Math.min(1, dt * 2.5));   // lights need the generator; Night Rounds kill them again
+  const pw = G.power, fl = G.night ? (rand() < .04 ? .25 : 0) : 1;
+  if (DBG.bright) { amb.intensity = 1.6; moon.intensity = .6; scene.fog.density = .004; torch.intensity = 0; lamps.forEach(l => l.l.intensity = .6); return devWorldRest(dt); }
+  amb.intensity = lerp(.06, .42, pw) * (1 - .8 * G.outK * (1 - pw)); moon.intensity = lerp(.08, .34, pw) * (1 - .9 * G.outK * (1 - pw));
+  lamps.forEach(l => { if (!G.night && rand() < dt * .02) l.fl = .3 + rand() * 1.4; l.fl = (l.fl || 0) - dt; const k = G.night ? fl : l.fl > 0 ? (rand() < .5 ? .08 : .8) : 1; l.l.intensity = pw * 1.05 * k; l.bulb.visible = pw > .5 && k > .5; });
+  G.beat = (G.beat || 0) - dt; if (P.hp < 60 && G.beat <= 0) { G.beat = .5 + P.hp / 100 * .55; SFX.beat(); }
+  torch.intensity = lerp(1.8, 0, pw) * (1 - .5 * G.outK); if (droneGain) droneGain.gain.value = lerp(.2, .07, pw); fire.intensity = 1.3 + Math.sin(time * 9) * .3 + rand() * .2;
+  scene.fog.density = lerp(.085, .032, pw) + G.outK * (1 - pw) * .17;   // outdoors at night: sight drops to roughly 5 m scene.fog.color.copy(FOG_NIGHT).lerp(FOG_DAY, pw); scene.background.copy(scene.fog.color);
+  devWorldRest(dt);
+}
+function devWorldRest(dt) {
+  if (crate.state === 'roll') { crate.t -= dt; if (crate.t <= 0) { crate.state = 'ready'; crate.t = 9; } } else if (crate.state === 'ready') { crate.t -= dt; if (crate.t <= 0) crateDone(); }
+  navT -= dt; if (navT <= 0) { navT = .2; const n = nearestNode(P.x, P.y, P.z, true); if (n >= 0) playerNode = n; }
+}
+
+/* =====================================================================
+   14. INPUT, PAUSE, LOOP
+   ===================================================================== */
+let wasLocked = false;
+const locked = () => document.pointerLockElement === canvas;
+function requestLock() { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+function showOverlay(mode) {
+  $('overlay').hidden = false;
+  if (mode === 'paused') { $('o-eyebrow').textContent = 'Paused · round ' + Math.max(1, G.round); $('o-title').innerHTML = 'Hold <em>fast</em>'; $('o-text').textContent = 'The dead wait for no one, but this once they will.'; $('o-stats').hidden = true; $('deploy').textContent = 'Resume'; }
+  if (mode === 'over') { $('o-eyebrow').textContent = 'Blockhouse overrun'; $('o-title').innerHTML = `Survived <em>${Math.max(0, G.round - 1)}</em> round${G.round - 1 === 1 ? '' : 's'}`; $('o-text').textContent = 'You fell on round ' + G.round + '.'; $('o-stats').hidden = false; $('o-stats').innerHTML = `<span>Kills <b>${G.kills}</b></span><span>Headshots <b>${G.heads}</b></span><span>Points <b>${G.points}</b></span>`; $('deploy').textContent = 'Redeploy'; }
+}
+function gameOver() { if (NET.mode) NET.stop(); G.state = 'over'; if (locked()) document.exitPointerLock(); showOverlay('over'); }
+function pause() { if (G.state !== 'playing') return; G.state = 'paused'; mouse.down = false; showOverlay('paused'); if (NET.mode) $('o-text').textContent = 'The co-op game keeps running while this menu is open.'; }
+$('deploy').addEventListener('click', () => {
+  initAudio();
+  if (G.state === 'menu' || G.state === 'over') newGame();
+  G.state = 'playing'; $('overlay').hidden = true; $('hud').hidden = false; wasLocked = false; requestLock();
+});
+document.addEventListener('pointerlockchange', () => { if (locked()) wasLocked = true; else if (wasLocked && G.state === 'playing') pause(); });
+canvas.addEventListener('mousedown', e => {
+  if (G.state !== 'playing') return;
+  if (!locked()) requestLock();
+  if (e.button === 0) { mouse.down = true; mouse.fresh = true; } else if (e.button === 2) mouse.right = true;
+});
+window.addEventListener('mouseup', e => { if (e.button === 0) mouse.down = false; else if (e.button === 2) mouse.right = false; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('mousemove', e => {
+  if (G.state !== 'playing') return;
+  const s = .0022 * lerp(1, .6, P.ads); P.yaw -= (e.movementX || 0) * s; P.pitch = clamp(P.pitch - (e.movementY || 0) * s, -1.5, 1.5);
+});
+canvas.addEventListener('wheel', e => { if (G.state === 'playing') { e.preventDefault(); swapWeapon(); } }, { passive: false });
+window.addEventListener('keydown', e => {
+  if (G.state !== 'playing') return;
+  if (['Space', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
+  if (e.repeat) return; keys[e.code] = true;
+  if (e.code === 'KeyR') startReload();
+  else if (e.code === 'KeyQ') swapWeapon(); else if (e.code === 'Digit1') swapWeapon(0); else if (e.code === 'Digit2') swapWeapon(1);
+  else if (e.code === 'KeyG') throwGrenade(); else if (e.code === 'KeyV') knife();
+  else if ((e.code === 'KeyF' || e.code === 'KeyE') && prompt && prompt.act) prompt.act();
+  else if ((e.code === 'Escape' || e.code === 'KeyP') && !locked()) pause();
+  else if (e.code === 'KeyN') devSet('noclip', !DBG.noclip); else if (e.code === 'KeyH') devSet('god', !DBG.god); else if (e.code === 'KeyK') devKillAll();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouse.down = mouse.right = false; });
+
+function resize() { const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1; renderer.setSize(w, h, false); camera.aspect = vmCam.aspect = w / h; camera.updateProjectionMatrix(); vmCam.updateProjectionMatrix(); }
+window.addEventListener('resize', resize); resize();
+
+/* =====================================================================
+   15. DEV MENU  (` toggles; N noclip, H god, K kill all while playing)
+   ===================================================================== */
+const DBG = { god: false, noclip: false, ammo: false, freeze: false, notarget: false, stats: false, nav: false, bright: false, scale: 1, fps: 60 };
+const DEV_FLAGS = { god: 'dv-god', noclip: 'dv-noclip', ammo: 'dv-ammo', freeze: 'dv-freeze', notarget: 'dv-notarget', stats: 'dv-stats', nav: 'dv-nav', bright: 'dv-lights' };
+const TELEPORTS = { 'Start Room': [8, 0, 9.5], 'Storage': [21, 0, 7], 'Radio Room': [12, UP, 7], 'Stair Landing': [24.6, UP, 2.4], 'Rooftop': [2.5, UP, 6.5], 'Airfield': [7.5, 0, -6], 'Me 323 Hold': [12, .3, -50], 'Fuel Depot': [-18, 0, -12], 'Command Post': [-25, 0, -33.5], 'ATC Cellar': [40.5, -3.6, -9], 'Lab Tunnel': [52.8, -3.6, 4], 'Flugleitung': [32.5, 0, -15], 'Flugleitung (watch room)': [40, UP, -13], 'Control Cab': [33.3, 6.9, -14.4], 'Service Tunnel': [30, 0, 12], 'Annex Lab': [46, 0, 16], 'Runway (far side)': [10, 0, -34] };
+let navLines = null;
+function devSet(k, v) {
+  DBG[k] = v; $(DEV_FLAGS[k]).checked = v;
+  if (k === 'noclip' && !v) { P.vy = 0; }
+  if (k === 'stats' && !v) $('h-dev').textContent = '';
+  if (k === 'nav') {
+    if (!navLines) { const pts = []; EDGES.forEach(e => { const a = NODES[NI[e[0]]], b = NODES[NI[e[1]]]; pts.push(new T.Vector3(a.x, a.y + .3, a.z), new T.Vector3(b.x, b.y + .3, b.z)); }); WINDOWS.forEach(w => { let pr = null; w.route.concat([[w.inn.x, w.inn.y, w.inn.z]]).forEach(r => { const v = new T.Vector3(r[0], r[1] + .3, r[2]); if (pr) pts.push(pr, v); pr = v; }); }); navLines = new T.LineSegments(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0x58c36a, depthTest: false, fog: false })); navLines.renderOrder = 9; scene.add(navLines); }
+    navLines.visible = v;
+  }
+}
+function devClearZombies() { zombies.forEach(z => scene.remove(z.g)); zombies.length = 0; }
+function devKillAll() { zombies.forEach(z => { if (z.state !== 'dying') { z.state = 'dying'; z.t = 0; } }); }
+function devSetRound(n, night) { n = clamp(Math.floor(n) || 1, 1, 999); devClearZombies(); clearMedkits(); G.night = false; G.toSpawn = 0; if (night) startRound(n, true); else { G.round = n - 1; G.phase = 'inter'; G.inter = 1.2; } }
+function devOpenDoors() { G.gen = true; G.open.doorA = G.open.debris = G.open.depot = G.open.tower = G.open.flug = true; doorA.off = debris.off = depotGate.off = towerGate.off = flugDoor.off = true; doorA.mesh.visible = depotGate.mesh.visible = towerGate.mesh.visible = flugDoor.mesh.visible = false; debrisGroup.visible = false; if (!G.open.blast) openBlast(); else buildNav(); }
+function devTick(dt) {
+  if (!DBG.stats) return;
+  DBG.statT = (DBG.statT || 0) - dt; if (DBG.statT > 0) return; DBG.statT = .2;
+  const alive = zombies.reduce((n, z) => n + (z.state !== 'dying' ? 1 : 0), 0), w = P.weapons[P.cur];
+  $('h-dev').textContent = `${Math.round(DBG.fps)} fps  x${DBG.scale}\npos ${P.x.toFixed(1)} ${P.y.toFixed(1)} ${P.z.toFixed(1)}\nnode ${NODES[playerNode].id}  hp ${Math.round(P.hp)}\nround ${G.round} ${G.phase}${G.night ? ' NIGHT' : ''}\nalive ${alive}  queued ${G.toSpawn}\nzombie hp ${G.night ? ROUNDS.nightHp(Math.max(1, G.round)) : ROUNDS.hp(Math.max(1, G.round))}\n${w.id} ${w.mag}/${w.res}  crate ${crate.spot}:${crate.uses}`;
+}
+function devOpen() { if (G.state !== 'playing') return; G.state = 'dev'; for (const k in keys) keys[k] = false; mouse.down = mouse.right = false; $('dv-round').value = Math.max(1, G.round); $('dev').hidden = false; if (locked()) document.exitPointerLock(); }
+function devClose() { if (G.state !== 'dev') return; $('dev').hidden = true; G.state = 'playing'; wasLocked = false; requestLock(); }
+Object.keys(DEV_FLAGS).forEach(k => $(DEV_FLAGS[k]).addEventListener('change', e => devSet(k, e.target.checked)));
+Object.keys(WEAPONS).forEach(id => $('dv-weapon').add(new Option(WEAPONS[id].name, id)));
+Object.keys(POWERUPS).forEach(id => $('dv-power').add(new Option(POWERUPS[id].label, id)));
+Object.keys(TELEPORTS).forEach(id => $('dv-tp').add(new Option(id, id)));
+const devOn = (id, fn) => $(id).addEventListener('click', fn);
+devOn('dv-setround', () => devSetRound(+$('dv-round').value, false));
+devOn('dv-night', () => devSetRound(+$('dv-round').value, true));
+devOn('dv-p1k', () => { G.points += 1000; }); devOn('dv-p10k', () => { G.points += 10000; });
+devOn('dv-refill', () => { P.weapons.forEach(w => { w.mag = WEAPONS[w.id].mag; w.res = WEAPONS[w.id].res; }); P.gren = 4; });
+devOn('dv-heal', () => { P.hp = CFG.player.hp; });
+devOn('dv-give', () => giveWeapon($('dv-weapon').value));
+devOn('dv-drop', () => { const B = aimBasis(); dropPowerup($('dv-power').value, P.x + B.f[0] * 2, P.y, P.z + B.f[2] * 2); });
+devOn('dv-kit', () => { const B = aimBasis(); spawnMedkit(P.x + B.f[0] * 1.5, P.y, P.z + B.f[2] * 1.5); });
+devOn('dv-go', () => { const t = TELEPORTS[$('dv-tp').value]; P.x = t[0]; P.y = P.camY = t[1]; P.z = t[2]; P.vy = 0; });
+devOn('dv-kill', devKillAll);
+devOn('dv-spawn', () => { if (G.round < 1) G.round = 1; spawnZombie(); });
+devOn('dv-doors', devOpenDoors);
+devOn('dv-parts', () => PARTS.forEach(p => { G.parts[p.id] = true; p.mesh.visible = false; }));
+devOn('dv-mains', () => { if (!G.open.mains) powerOn(); });
+devOn('dv-link', () => { PADS.forEach(pd => pd.linked = true); G.linkPad = -1; G.lastPad = 0; });
+devOn('dv-blast', () => { if (!G.open.blast) openBlast(); });
+devOn('dv-fix', () => WINDOWS.forEach(w => setBoards(w, CFG.boards)));
+devOn('dv-break', () => WINDOWS.forEach(w => { if (!w.climbOnly) setBoards(w, 0); }));
+devOn('dv-crate', () => { crate.state = 'idle'; crateGlow.visible = false; setCrateSpot(nextCrateSpot()); });
+$('dv-scale').addEventListener('input', e => { DBG.scale = +e.target.value; $('dv-scalev').textContent = DBG.scale + 'x'; });
+devOn('dv-close', devClose);
+window.addEventListener('keydown', e => { if (e.code !== 'Backquote') return; e.preventDefault(); if (G.state === 'playing') devOpen(); else if (G.state === 'dev') devClose(); });
+
+/* =====================================================================
+   16. CO-OP — everyone with this page open can play the same game.
+       One player hosts and runs the rounds and every zombie; the others send where they are, what they hit and what they bought.
+       Everything travels in the page's shared "presence" (who is here and what they are doing), updated about 12 times a second.
+   ===================================================================== */
+const NET = { mode: null, room: null, me: null, hostPeer: null, credit: null, remotes: {}, earn: {}, dmgOut: {}, seq: 0, hits: [], reqs: [], evs: [], evSeq: 0, evSeen: -1, lastEarn: 0, lastDmg: 0, sendT: 0, zid: 0, lost: 0, lastS: null, mkGone: {}, joined: false };
+[zombies, powerups, medkits].forEach(a => { const p = a.push.bind(a); a.push = o => { if (o.id === undefined) o.id = ++NET.zid; return p(o); }; });
+const OPEN_KEYS = ['doorA', 'debris', 'blast', 'depot', 'tower', 'flug', 'mains'];
+const monoNow = () => ({ o: OPEN_KEYS.reduce((m, k, i) => m | (G.open[k] ? 1 << i : 0), 0), g: G.gen ? 1 : 0, pm: PARTS.reduce((m, p, i) => m | (G.parts[p.id] ? 1 << i : 0), 0), ck: G.crank ? 1 : 0, pl: PADS.reduce((m, p, i) => m | (p.linked ? 1 << i : 0), 0) });
+function syncOpenVisuals() {
+  const set = (b, open) => { b.off = open; if (b.mesh) b.mesh.visible = !open; };
+  set(doorA, G.open.doorA); set(debris, G.open.debris); debrisGroup.visible = !G.open.debris; set(blastDoor, G.open.blast); set(depotGate, G.open.depot); set(towerGate, G.open.tower); set(flugDoor, G.open.flug); set(tunnelDoor, G.open.mains); set(basementDoor, G.open.mains);
+  switchLamp.material.color.setHex(G.open.mains ? 0x58c36a : 0xbd2a20); crankModel.visible = G.crank && !G.open.blast; PARTS.forEach(p => p.mesh.visible = !G.parts[p.id]); buildNav();
+}
+// Doors, parts, power and links only ever go from "no" to "yes", so every machine simply accepts any "yes" it hears about.
+function applyMono(w) {
+  if (!w) return; let ch = false;
+  OPEN_KEYS.forEach((k, i) => { if ((w.o >> i & 1) && !G.open[k]) { G.open[k] = true; ch = true; } });
+  if (w.g && !G.gen) { G.gen = true; ch = true; }
+  PARTS.forEach((p, i) => { if ((w.pm >> i & 1) && !G.parts[p.id]) { G.parts[p.id] = true; ch = true; } });
+  if (w.ck && !G.crank) { G.crank = true; ch = true; }
+  PADS.forEach((p, i) => { if ((w.pl >> i & 1) && !p.linked) { p.linked = true; ch = true; } });
+  if (ch) syncOpenVisuals();
+}
+const AV = { suit: new T.MeshLambertMaterial({ color: 0x2f382b }), mask: new T.MeshLambertMaterial({ color: 0x15181a }), lens: new T.MeshBasicMaterial({ color: 0x8fd0c0 }) };
+function buildAvatar() {   // another player: gas-masked soldier, clearly not a zombie
+  const g = new T.Group(), add = (geo, mat, x, y, z) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); g.add(m); return m; };
+  add(ZG.leg, AV.suit, -.13, .425, 0); add(ZG.leg, AV.suit, .13, .425, 0); add(ZG.torso, AV.suit, 0, 1.16, 0);
+  add(ZG.arm, AV.suit, -.3, 1.25, .2).rotation.x = -1.2; add(ZG.arm, AV.suit, .3, 1.25, .2).rotation.x = -1.2;
+  add(ZG.head, AV.mask, 0, 1.6, 0); add(new T.BoxGeometry(.3, .1, .3), AV.suit, 0, 1.76, 0); [-.06, .06].forEach(x => add(ZG.eye, AV.lens, x, 1.62, .13)); add(new T.BoxGeometry(.06, .07, .55), AV.mask, .2, 1.3, .45);
+  scene.add(g); return g;
+}
+const myPos = () => [Math.round(P.x * 100) / 100, Math.round(P.y * 100) / 100, Math.round(P.z * 100) / 100, Math.round(P.yaw * 100) / 100];
+// other players: read where each one is, draw them, forget the ones who left. Returns the host's entry when called by a joined player.
+function netPeers(dt, each) {
+  const seen = {}; let host = null;
+  for (const pr of NET.room.peers()) {
+    if (pr.isMe && pr.sameTab) { NET.me = pr.peer; continue; }
+    const s = pr.presence; if (!s) continue;
+    if (s.t === 'o' && pr.peer === NET.hostPeer) host = pr;
+    if ((s.t !== 'h' && s.t !== 'c') || !Array.isArray(s.p)) continue;
+    if (s.t === 'h' && !host) host = pr;
+    seen[pr.peer] = 1;
+    let r = NET.remotes[pr.peer];
+    if (!r) { r = NET.remotes[pr.peer] = { peer: pr.peer, g: buildAvatar(), x: s.p[0], y: s.p[1], z: s.p[2], yaw: s.p[3], node: 0, nodeT: 0, hs: 0, qs: 0, dn: false }; if (NET.mode === 'host') banner('A player joined', Object.keys(NET.remotes).length + 1 + ' players in the blockhouse', 2.5); }
+    const k = Math.min(1, dt * 12); r.x = lerp(r.x, s.p[0], k); r.y = lerp(r.y, s.p[1], k); r.z = lerp(r.z, s.p[2], k); r.yaw = s.p[3]; r.dn = !!s.dn;
+    r.g.position.set(r.x, r.y, r.z); r.g.rotation.set(r.dn ? -1.5 : 0, r.yaw + Math.PI, 0);
+    if (each) each(pr, s, r);
+  }
+  for (const k in NET.remotes) if (!seen[k]) { scene.remove(NET.remotes[k].g); delete NET.remotes[k]; }
+  return host;
+}
+NET.self = { peer: null, get x() { return P.x; }, get y() { return P.y; }, get z() { return P.z; }, get node() { return playerNode; } };
+NET.target = z => {   // each zombie hunts the nearest player who is still standing
+  if (NET.mode !== 'host') return NET.self;
+  let best = null, bd = 1e9; if (!P.down) { best = NET.self; bd = Math.hypot(P.x - z.x, P.z - z.z) + Math.abs(P.y - z.y) * 3; }
+  for (const k in NET.remotes) { const r = NET.remotes[k]; if (r.dn) continue; const d = Math.hypot(r.x - z.x, r.z - z.z) + Math.abs(r.y - z.y) * 3; if (d < bd) { bd = d; best = r; } }
+  return best || NET.self;
+};
+NET.hurt = (tg, dmg) => { if (!tg.peer) hurtPlayer(dmg); else NET.dmgOut[tg.peer] = (NET.dmgOut[tg.peer] || 0) + dmg; };
+NET.ev = (...a) => { NET.evs.push([++NET.evSeq].concat(a)); if (NET.evs.length > 10) NET.evs.shift(); };
+NET.req = (kind, arg) => { NET.reqs.push([++NET.seq, kind, arg]); if (NET.reqs.length > 10) NET.reqs.shift(); };
+NET.report = (z, dmg, head, kind) => {   // a joined player's hit: show it at once, let the host decide what it did
+  if (z.state === 'dying') return; hitMarker(head); burst(z.x, z.y + (head ? 1.6 : 1.1), z.z, z.type === 'echo' ? 0x9fd8ff : 0x7a1410, 4, 2.5);
+  NET.hits.push([++NET.seq, z.id, Math.round(dmg), head ? 1 : 0, kind]); if (NET.hits.length > 40) NET.hits.shift();
+};
+NET.died = () => {
+  if (!NET.mode) return gameOver();
+  P.down = true; P.hp = 0; mouse.down = false; banner('You are down', 'You are back on your feet when the next round starts.', 5);
+};
+NET.revive = () => { P.down = false; P.hp = CFG.player.hp; P.lastHit = time; P.x = 7 + rand() * 2; P.y = 0; P.z = 9.5; P.vy = 0; banner('Back on your feet', '', 2.5); };
+function applyPowerup(type) {
+  SFX.power(); banner(POWERUPS[type].label, '', 1.8);
+  if (type === 'ammo') { P.weapons.forEach(w => { w.mag = WEAPONS[w.id].mag; w.res = WEAPONS[w.id].res; }); P.gren = 4; }
+  else if (type === 'insta') { if (NET.mode !== 'client') G.insta = 30; } else if (type === 'double') { if (NET.mode !== 'client') G.dbl = 30; }
+  else if (type === 'bomb') { flash(.8); SFX.boom(); if (NET.mode !== 'client') zombies.forEach(z => { if (z.state !== 'dying') { z.hp = 0; z.state = 'dying'; z.t = 0; G.kills++; } }); addPoints(400); }
+  else if (type === 'repair') { if (NET.mode !== 'client') WINDOWS.forEach(w => setBoards(w, CFG.boards)); addPoints(200); }
+}
+// ---- the host: applies what the others report, then tells everyone the state of the world
+NET.host = dt => {
+  netPeers(dt, (pr, s, r) => {
+    if (s.t !== 'c') return;
+    r.nodeT -= dt; if (r.nodeT <= 0) { r.nodeT = .25; const n = nearestNode(r.x, r.y, r.z, true); if (n >= 0) r.node = n; }
+    (s.h || []).forEach(h => { if (h[0] <= r.hs) return; r.hs = h[0]; const z = zombies.find(q => q.id === h[1] && q.state !== 'dying'); if (z) { NET.credit = pr.peer; damageZombie(z, Math.min(+h[2] || 0, 5000), !!h[3], h[4]); NET.credit = null; } });
+    (s.q || []).forEach(q => { if (q[0] <= r.qs) return; r.qs = q[0];
+      if (q[1] === 'b') { const w = WINDOWS[q[2]]; if (w && !w.climbOnly) setBoards(w, w.boards + 1); }
+      else if (q[1] === 'pu') { const i = powerups.findIndex(p => p.id === q[2]); if (i >= 0) { const p = powerups[i]; scene.remove(p.m); powerups.splice(i, 1); applyPowerup(p.type); NET.ev('pu', p.type); } }
+      else if (q[1] === 'mk') { const i = medkits.findIndex(m => m.id === q[2]); if (i >= 0) { scene.remove(medkits[i].g); medkits.splice(i, 1); } } });
+    applyMono(s.w);
+  });
+  if (P.down && !Object.keys(NET.remotes).some(k => !NET.remotes[k].dn)) return gameOver();   // everyone is down
+  NET.sendT -= dt; if (NET.sendT > 0) return; NET.sendT = 1 / 12;
+  const zs = zombies.filter(z => z.state !== 'dying').map(z => [z.id, Math.round(z.x * 10), Math.round(z.y * 10), Math.round(z.z * 10), Math.round(z.yaw * 10), (z.type === 'echo' ? 1 : 0) | (z.wind > 0 ? 2 : 0) | (z.state === 'tear' ? 4 : 0) | (z.inside ? 0 : 8)].join(',')).join(';');
+  const W = Object.assign(monoNow(), { r: G.round, n: G.night ? 1 : 0, pp: PARTS.map(p => p.spots.indexOf(p.pos)), b: WINDOWS.map(w => w.boards).join(''), cs: crate.spot, i: Math.max(0, Math.ceil(G.insta)), d: Math.max(0, Math.ceil(G.dbl)),
+    pu: powerups.map(p => [p.id, p.type, Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, Math.round(p.z * 10) / 10]), mk: medkits.map(m => [m.id, Math.round(m.x * 10) / 10, Math.round(m.y * 10) / 10, Math.round(m.z * 10) / 10]) });
+  NET.room.presence({ t: 'h', p: myPos(), dn: P.down ? 1 : 0, zs, W, e: NET.earn, d: NET.dmgOut, ev: NET.evs }).catch(() => {});
+};
+// ---- a joined player: draws the host's world, plays their own soldier
+function applyHost(s) {
+  const W = s.W; if (!W) return;
+  if (W.r !== G.round) { if (W.r > G.round && P.down) NET.revive(); G.round = W.r; }
+  G.night = !!W.n; G.insta = W.i; G.dbl = W.d; applyMono(W);
+  PARTS.forEach((p, i) => { const sp = p.spots[W.pp[i]]; if (sp && p.pos !== sp) { p.pos = sp; p.mesh.position.set(sp[0], sp[1], sp[2]); } });
+  WINDOWS.forEach((w, i) => { const n = +W.b[i]; if (n === n && w.boards !== n) setBoards(w, n); });
+  if (crate.spot !== W.cs && crate.state === 'idle' && CRATE_SPOTS[W.cs]) setCrateSpot(W.cs);
+  const sync = (arr, list, make, kill) => { const ids = {}; list.forEach(e => { ids[e[0]] = 1; if (!arr.some(a => a.id === e[0]) && !NET.mkGone[e[0]]) make(e); }); for (let i = arr.length - 1; i >= 0; i--) if (!ids[arr[i].id]) { kill(arr[i]); arr.splice(i, 1); } };
+  sync(powerups, W.pu || [], e => { dropPowerup(e[1], e[2], e[3] - .9, e[4]); powerups[powerups.length - 1].id = e[0]; }, p => scene.remove(p.m)); powerups.forEach(p => p.t = 26);
+  sync(medkits, W.mk || [], e => { spawnMedkit(e[1], e[2], e[3]); medkits[medkits.length - 1].id = e[0]; }, m => scene.remove(m.g));
+  const first = NET.evSeen < 0, e = (s.e || {})[NET.me] || 0, d = (s.d || {})[NET.me] || 0;
+  if (first) { NET.lastEarn = e; NET.lastDmg = d; }
+  if (e > NET.lastEarn) { const n = e - NET.lastEarn; G.points += n; const el = $('h-gain'); el.textContent = '+' + n; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); } NET.lastEarn = e;
+  if (d > NET.lastDmg && !P.down) hurtPlayer(d - NET.lastDmg); NET.lastDmg = d;
+  (s.ev || []).forEach(v => { if (v[0] <= NET.evSeen) return; if (!first) { if (v[1] === 'bn') banner(v[2], v[3], v[4], !!v[5]); else if (v[1] === 'pu') applyPowerup(v[2]); } }); NET.evSeen = (s.ev || []).reduce((m, v) => Math.max(m, v[0]), Math.max(0, NET.evSeen));
+  const live = {};
+  if (s.zs) s.zs.split(';').forEach(str => { const a = str.split(',').map(Number), id = a[0], f = a[5]; live[id] = 1;
+    let z = zombies.find(q => q.id === id);
+    if (!z) { z = Object.assign(buildZombie(!!(f & 1)), { id, type: f & 1 ? 'echo' : 'z', x: a[1] / 10, y: a[2] / 10, z: a[3] / 10, yaw: a[4] / 10, state: 'chase', hp: 1, phase: rand() * 6, t: 0 }); zombies.push(z); }
+    if (z.state !== 'dying') { z.tx = a[1] / 10; z.ty = a[2] / 10; z.tz = a[3] / 10; z.yaw = a[4] / 10; z.wind = f & 2 ? 1 : 0; z.tear = !!(f & 4); z.inside = !(f & 8); } });
+  zombies.forEach(z => { if (!live[z.id] && z.state !== 'dying') { z.state = 'dying'; z.t = 0; } });
+}
+function updateReplicas(dt) {
+  for (let i = zombies.length - 1; i >= 0; i--) {
+    const z = zombies[i], p = z.parts;
+    if (z.state === 'dying') { z.t += dt; if (z.type === 'echo') z.g.scale.setScalar(Math.max(.01, 1 - z.t * 3)); else z.g.rotation.x = -Math.min(1, z.t / .35) * Math.PI / 2; if (z.t > (z.type === 'echo' ? .35 : 2.2)) { scene.remove(z.g); zombies.splice(i, 1); } continue; }
+    const k = Math.min(1, dt * 10), ox = z.x, oz = z.z; z.x = lerp(z.x, z.tx, k); z.y = lerp(z.y, z.ty, k); z.z = lerp(z.z, z.tz, k);
+    const sp = Math.hypot(z.x - ox, z.z - oz) / Math.max(dt, .001); z.phase += dt * (2 + sp * 1.6); const sw = sp > .15 ? Math.sin(z.phase) * .6 : 0;
+    z.g.position.set(z.x, z.y, z.z); z.g.rotation.y = z.yaw; p.lL.rotation.x = sw; p.lR.rotation.x = -sw;
+    if (z.tear) { p.aL.rotation.x = -1.6 + Math.sin(z.phase * 2) * .5; p.aR.rotation.x = -1.6 + Math.cos(z.phase * 2) * .5; } else if (z.wind) p.aL.rotation.x = p.aR.rotation.x = -2.2; else { p.aL.rotation.x = -1.45; p.aR.rotation.x = -1.3; }
+  }
+}
+NET.client = dt => {
+  const host = netPeers(dt);
+  if (host && host.presence.t === 'o') { NET.stop(); return gameOver(); }
+  if (!host) { NET.lost += dt; if (NET.lost > 8) { NET.stop(); banner('The host has left', '', 4); gameOver(); } }
+  else { NET.lost = 0; NET.hostPeer = host.peer; if (host.presence !== NET.lastS) { NET.lastS = host.presence; applyHost(host.presence); } }
+  updateReplicas(dt);
+  NET.sendT -= dt; if (NET.sendT > 0) return; NET.sendT = 1 / 15;
+  NET.room.presence({ t: 'c', p: myPos(), dn: P.down ? 1 : 0, h: NET.hits, q: NET.reqs, w: monoNow() }).catch(() => {});
+};
+NET.start = mode => {
+  Object.assign(NET, { mode, remotes: {}, earn: {}, dmgOut: {}, hits: [], reqs: [], evs: [], evSeen: -1, lastEarn: 0, lastDmg: 0, sendT: 0, lost: 0, lastS: null, mkGone: {}, hostPeer: null });
+  P.down = false; if (mode === 'client') { G.phase = 'remote'; P.x = 6.5 + rand() * 3; }
+};
+NET.stop = () => {
+  const was = NET.mode; NET.mode = null; for (const k in NET.remotes) scene.remove(NET.remotes[k].g); NET.remotes = {}; P.down = false;
+  if (NET.room && was) NET.room.presence({ t: was === 'host' ? 'o' : 'm', p: null, zs: null, W: null, h: null, q: null, w: null, e: null, d: null, ev: null, dn: null }).catch(() => {});
+};
+NET.lobby = () => {
+  if (!NET.room) return; const ps = NET.room.peers(), others = ps.filter(p => !(p.isMe && p.sameTab)), host = others.find(p => p.presence && p.presence.t === 'h');
+  $('co-join').disabled = !host || !!NET.mode; $('co-host').disabled = !!host || !!NET.mode;
+  $('co-status').textContent = host ? 'A game is running. Join it.' : others.length ? others.length + ' other player' + (others.length === 1 ? '' : 's') + ' here. One of you hosts, the rest join.' : 'Nobody else has this page open yet.';
+};
+function coopBegin(mode) {
+  initAudio(); newGame(); NET.start(mode);
+  G.state = 'playing'; $('overlay').hidden = true; $('hud').hidden = false; wasLocked = false; requestLock(); NET.lobby();
+}
+$('co-host').addEventListener('click', () => coopBegin('host'));
+$('co-join').addEventListener('click', () => coopBegin('client'));
+(async () => {
+  let lobby = null; try { lobby = window.claude && window.claude.use ? await window.claude.use('room') : null; } catch (e) {}
+  if (!lobby) { $('co-status').textContent = 'Co-op is unavailable in this view. Solo still works.'; return; }
+  let rm = lobby; try { rm = await lobby.join('fliegerhorst-935'); } catch (e) {}
+  NET.room = rm; $('co-status').textContent = 'Looking for other players…';
+  rm.presence({ t: 'm' }).catch(() => {});
+  rm.onPeers(() => { if (!NET.mode) NET.lobby(); }, () => { NET.room = null; $('co-host').disabled = $('co-join').disabled = true; $('co-status').textContent = 'Co-op is unavailable in this view. Solo still works.'; if (NET.mode) { NET.mode = null; gameOver(); } });
+  NET.lobby();
+})();
+
+newGame();
+let last = performance.now(), menuYaw = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const raw = (now - last) / 1000, dt = Math.min(.05, raw) * DBG.scale; last = now; DBG.fps = lerp(DBG.fps, 1 / Math.max(raw, .001), .05);
+  if (canvas.width !== Math.floor(canvas.clientWidth * renderer.getPixelRatio())) resize();
+  if (G.state === 'playing' || (NET.mode && (G.state === 'paused' || G.state === 'dev'))) {   // a co-op game never stops for one player's menu
+    time += dt;
+    updateWorld(dt); updateMap(dt); if (!P.down) updatePlayer(dt); findPrompt(); interactHeld(dt);
+    if (NET.mode === 'client') NET.client(dt); else { if (!DBG.freeze) { updateRound(dt); updateZombies(dt); } if (NET.mode === 'host') NET.host(dt); }
+    devTick(dt); updateGrenades(dt); updatePowerups(dt); updateFx(dt); updateHud(dt);
+  } else if (G.state === 'menu') {
+    menuYaw += dt * .12; camera.position.set(8, 1.62, 8.5); camera.rotation.set(0, menuYaw, 0); fire.intensity = 1.3 + Math.sin(now / 110) * .3; gunRoot.position.set(.2, -.19, -.42);
+  }
+  renderer.clear(); renderer.render(scene, camera); renderer.clearDepth(); renderer.render(vmScene, vmCam);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
