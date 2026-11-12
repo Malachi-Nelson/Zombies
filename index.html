@@ -102,6 +102,14 @@ body{background:var(--concrete);color:var(--bone);font-family:var(--font-body);f
 .coop button:disabled{border-color:var(--steel);color:var(--steel);cursor:default}
 .coop button:focus-visible{outline:2px solid var(--sodium);outline-offset:3px}
 .coop span{font-family:var(--font-data);font-size:13px;color:var(--steel);min-width:0}
+.coop input{font-family:var(--font-data);font-size:14px;color:var(--chalk);background:rgba(0,0,0,.35);border:1px solid var(--steel);padding:9px 10px;width:150px;min-width:0}
+.coop input:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
+.coop label{font-family:var(--font-data);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--steel)}
+.roster{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-width:420px}
+.roster li{display:flex;justify-content:space-between;gap:12px;font-family:var(--font-data);font-size:14px;color:var(--chalk);border-left:2px solid var(--steel);padding:5px 10px;background:rgba(0,0,0,.28)}
+.roster li.ok{border-left-color:var(--sodium)}
+.roster li span:last-child{color:var(--steel);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.roster li.ok span:last-child{color:var(--sodium)}
 .note{font-size:14px !important;color:var(--steel) !important}
 .maps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
 .map{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--steel);color:var(--bone);text-decoration:none;min-width:0}
@@ -173,8 +181,10 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
         <div><dt>G · V</dt><dd>Grenade · knife</dd></div>
       </dl>
       <button id="deploy" type="button">Deploy</button>
-      <div class="coop"><button id="co-host" type="button" disabled>Host co-op</button><button id="co-join" type="button" disabled>Join co-op</button><span id="co-status">Co-op: connecting…</span></div>
-      <p class="note" id="o-note">Needs a keyboard and mouse. Esc pauses. The ` key opens the dev menu. Co-op: send friends the invite link below, one player hosts, the others join.</p>
+      <div class="coop"><label for="co-name">Callsign</label><input id="co-name" type="text" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Soldat"><button id="co-host" type="button" disabled>Open lobby</button><button id="co-join" type="button" disabled>Join lobby</button><button id="co-ready" type="button" hidden>Ready up</button><button id="co-start" type="button" hidden>Start match</button><button id="co-leave" type="button" hidden>Leave lobby</button></div>
+      <ul class="roster" id="co-roster" hidden></ul>
+      <div class="coop"><span id="co-status">Co-op: connecting…</span></div>
+      <p class="note" id="o-note">Needs a keyboard and mouse. Esc pauses. The ` key opens the dev menu. Co-op: send friends the invite link below. One player opens a lobby, the others join it and ready up, and the leader starts the match.</p>
     </div>
   </div>
 </div>
@@ -237,7 +247,7 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
     if (!started) { started = true; if (fresh) beHub(); else beClient(); }
     return room;
   } };
-  const coop = document.querySelector('.coop');
+  const coops = document.querySelectorAll('.coop'), coop = coops[coops.length - 1];
   if (coop) {
     const row = document.createElement('div'); row.className = 'coop';
     row.innerHTML = '<input id="co-link" readonly aria-label="Invite link" style="flex:1;min-width:180px;font:13px ui-monospace,monospace;padding:8px;background:#14181c;color:#f3f1e8;border:1px solid #66757f"><button type="button" id="co-copy">Copy invite link</button><span id="co-link-status">Opening a room…</span>';
@@ -1456,6 +1466,7 @@ function gameOver() { if (NET.mode) NET.stop(); G.state = 'over'; if (locked()) 
 function pause() { if (G.state !== 'playing') return; G.state = 'paused'; mouse.down = false; showOverlay('paused'); if (NET.mode) $('o-text').textContent = 'The co-op game keeps running while this menu is open.'; }
 $('deploy').addEventListener('click', () => {
   initAudio();
+  if (NET.lob && !NET.mode) lobbySet(null);
   if (G.state === 'menu' || G.state === 'over') newGame();
   G.state = 'playing'; $('overlay').hidden = true; $('hud').hidden = false; wasLocked = false; requestLock();
 });
@@ -1604,14 +1615,22 @@ function netPeers(dt, each) {
     if (s.t === 'h' && !host) host = pr;
     seen[pr.peer] = 1;
     let r = NET.remotes[pr.peer];
-    if (!r) { r = NET.remotes[pr.peer] = { peer: pr.peer, g: buildAvatar(), x: s.p[0], y: s.p[1], z: s.p[2], yaw: s.p[3], node: 0, nodeT: 0, hs: 0, qs: 0, dn: false }; if (NET.mode === 'host') banner('A player joined', Object.keys(NET.remotes).length + 1 + ' players in the blockhouse', 2.5); }
+    if (!r) { r = NET.remotes[pr.peer] = { peer: pr.peer, g: buildAvatar(), x: s.p[0], y: s.p[1], z: s.p[2], yaw: s.p[3], node: 0, nodeT: 0, hs: 0, qs: 0, dn: false, name: null }; if (NET.mode === 'host') banner(cleanName(s.n) + ' joined', Object.keys(NET.remotes).length + 1 + ' players in the blockhouse', 2.5); }
     const k = Math.min(1, dt * 12), ox = r.x, oz = r.z; r.x = lerp(r.x, s.p[0], k); r.y = lerp(r.y, s.p[1], k); r.z = lerp(r.z, s.p[2], k); r.yaw = s.p[3]; r.dn = !!s.dn;
     const sp = Math.hypot(r.x - ox, r.z - oz) / Math.max(dt, .001), pt = r.g.userData.parts; r.ph = (r.ph || 0) + dt * (2 + sp * 1.8); const sw = sp > .2 && !r.dn ? Math.sin(r.ph) * .55 : 0; pt.lL.rotation.x = sw; pt.lR.rotation.x = -sw;
     r.g.position.set(r.x, r.y + (r.dn ? .25 : 0), r.z); r.g.rotation.set(r.dn ? -1.5 : 0, r.yaw + Math.PI, 0);
+    { const nm = cleanName(s.n); if (nm !== r.name) { r.name = nm; nameTag(r, nm); } }
     if (each) each(pr, s, r);
   }
   for (const k in NET.remotes) if (!seen[k]) { scene.remove(NET.remotes[k].g); delete NET.remotes[k]; }
   return host;
+}
+const cleanName = n => String(n || '').replace(/[^\w \-]/g, '').trim().slice(0, 14) || 'Soldat';
+function nameTag(r, name) {   // the callsign floating over a squadmate, so you can tell who is who in the dark
+  if (r.tag) { r.g.remove(r.tag); r.tag.material.dispose(); r.tagTex.dispose(); }
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64; const x = c.getContext('2d');
+  x.font = '700 34px system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 6; x.strokeStyle = 'rgba(0,0,0,.85)'; x.strokeText(name, 128, 34); x.fillStyle = '#f3f1e8'; x.fillText(name, 128, 34);
+  const tex = new T.CanvasTexture(c), sp = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: .9 })); sp.scale.set(1.2, .3, 1); sp.position.set(0, 2.14, 0); r.g.add(sp); r.tag = sp; r.tagTex = tex;
 }
 NET.self = { peer: null, get x() { return P.x; }, get y() { return P.y; }, get z() { return P.z; }, get node() { return playerNode; } };
 NET.target = z => {   // each zombie hunts the nearest player who is still standing
@@ -1694,7 +1713,7 @@ function updateReplicas(dt) {
 NET.client = dt => {
   const host = netPeers(dt);
   if (host && host.presence.t === 'o') { NET.stop(); return gameOver(); }
-  if (!host) { NET.lost += dt; if (NET.lost > 8) { NET.stop(); banner('The host has left', '', 4); gameOver(); } }
+  if (!host) { NET.lost += dt; if (NET.lost > 5) { NET.stop(); banner('The host has left', '', 4); gameOver(); } }
   else { NET.lost = 0; NET.hostPeer = host.peer; if (host.presence !== NET.lastS) { NET.lastS = host.presence; applyHost(host.presence); } }
   updateReplicas(dt);
   NET.sendT -= dt; if (NET.sendT > 0) return; NET.sendT = 1 / 15;
@@ -1702,30 +1721,62 @@ NET.client = dt => {
 };
 NET.start = mode => {
   Object.assign(NET, { mode, remotes: {}, earn: {}, dmgOut: {}, hits: [], reqs: [], evs: [], evSeen: -1, lastEarn: 0, lastDmg: 0, sendT: 0, lost: 0, lastS: null, mkGone: {}, hostPeer: null });
-  P.down = false; if (mode === 'client') { G.phase = 'remote'; P.x = 6.5 + rand() * 3; }
+  P.down = false; if (mode === 'client') { G.phase = 'remote';   // everyone gets their own place to stand in the Start Room: the host in the middle, the rest in the order they are listed
+    const ids = NET.room.peers().filter(p => (p.isMe && p.sameTab) || (p.presence && (p.presence.t === 'c' || p.presence.t === 'L'))).map(p => p.peer).sort(), me = NET.room.peers().find(p => p.isMe && p.sameTab);
+    P.x = [6.9, 9.1, 6.3, 7.45, 8.55][Math.max(0, ids.indexOf(me ? me.peer : '')) % 5]; }
 };
 NET.stop = () => {
   const was = NET.mode; NET.mode = null; for (const k in NET.remotes) scene.remove(NET.remotes[k].g); NET.remotes = {}; P.down = false;
+  if (NET.room && was) setTimeout(NET.lobby, 0);
   if (NET.room && was) NET.room.presence({ t: was === 'host' ? 'o' : 'm', p: null, zs: null, W: null, h: null, q: null, w: null, e: null, d: null, ev: null, dn: null }).catch(() => {});
 };
+// ---- the lobby: players gather on the menu, ready up, and the leader starts the match for everyone at once
+NET.lob = null;   // { lead, ready } while this player is in the lobby
+const myName = () => cleanName($('co-name').value);
+NET.say = () => { if (!NET.room || NET.mode) return; const L = NET.lob; NET.room.presence(L ? { t: 'L', ld: L.lead ? 1 : 0, rd: L.lead || L.ready ? 1 : 0, n: myName() } : { t: 'm', ld: null, rd: null, n: myName() }).catch(() => {}); };
 NET.lobby = () => {
-  if (!NET.room) return; const ps = NET.room.peers(), others = ps.filter(p => !(p.isMe && p.sameTab)), host = others.find(p => p.presence && p.presence.t === 'h');
-  $('co-join').disabled = !host || !!NET.mode; $('co-host').disabled = !!host || !!NET.mode;
-  $('co-status').textContent = host ? 'A game is running. Join it.' : others.length ? others.length + ' other player' + (others.length === 1 ? '' : 's') + ' here. One of you hosts, the rest join.' : 'Nobody else has this page open yet.';
+  if (!NET.room || NET.mode) return;
+  const ps = NET.room.peers(), mine = ps.find(p => p.isMe && p.sameTab), me = mine ? mine.peer : '', others = ps.filter(p => p !== mine && p.presence);
+  const host = others.find(p => p.presence.t === 'h'), inL = others.filter(p => p.presence.t === 'L'), leads = inL.filter(p => p.presence.ld).sort((a, b) => a.peer < b.peer ? -1 : 1), L = NET.lob;
+  if (L && host) return coopBegin('client');                                              // the leader started: everyone in the lobby goes in together
+  if (L && me) {
+    if (L.lead && leads.length && leads[0].peer < me) { L.lead = false; L.ready = true; NET.say(); }                          // two people opened a lobby at once: one steps down
+    else if (!L.lead && !leads.length && !inL.some(p => p.peer < me)) { L.lead = true; NET.say(); }                           // the leader left: the next in line takes over
+  }
+  const allReady = inL.every(p => p.presence.rd), waiting = inL.filter(p => !p.presence.rd).length, plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+  $('co-host').hidden = $('co-join').hidden = !!L; $('co-ready').hidden = !L || L.lead; $('co-start').hidden = !L || !L.lead; $('co-leave').hidden = !L; $('co-name').disabled = false;
+  $('co-host').disabled = !!host || leads.length > 0; $('co-join').disabled = !host && !leads.length; $('co-join').textContent = host ? 'Join match in progress' : 'Join lobby';
+  $('co-ready').textContent = L && L.ready ? 'Not ready' : 'Ready up'; $('co-start').disabled = !allReady;
+  const rows = [];
+  if (L || leads.length) { if (L) rows.push([myName() + ' (you)', L.lead ? 'Leader' : L.ready ? 'Ready' : 'Not ready', L.lead || L.ready, L.lead ? 0 : 1, me]); inL.forEach(p => rows.push([cleanName(p.presence.n), p.presence.ld ? 'Leader' : p.presence.rd ? 'Ready' : 'Not ready', p.presence.ld || p.presence.rd, p.presence.ld ? 0 : 1, p.peer])); }
+  else if (host) others.filter(p => p.presence.t === 'h' || p.presence.t === 'c').forEach(p => rows.push([cleanName(p.presence.n), p.presence.t === 'h' ? 'Host · in the match' : 'In the match', true, p.presence.t === 'h' ? 0 : 1, p.peer]));
+  rows.sort((a, b) => a[3] - b[3] || (a[4] < b[4] ? -1 : 1));
+  const ul = $('co-roster'); ul.hidden = !rows.length; ul.textContent = '';
+  rows.forEach(r => { const li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('span'); a.textContent = r[0]; b.textContent = r[1]; if (r[2]) li.className = 'ok'; li.appendChild(a); li.appendChild(b); ul.appendChild(li); });
+  $('co-status').textContent = L ? (L.lead ? (!inL.length ? 'Lobby open. Waiting for players. You can also start alone and let them join in progress.' : allReady ? 'Everyone is ready. Start when you like.' : 'Waiting for ' + plural(waiting, 'player') + ' to ready up.') : L.ready ? 'Ready. Waiting for the leader to start.' : 'Ready up when you are set.')
+    : host ? 'A match is running. You can join it in progress.' : leads.length ? cleanName(leads[0].presence.n) + ' has a lobby open with ' + plural(inL.length, 'player') + '.' : others.length ? plural(others.length, 'other player') + ' on this page. Open a lobby for them to join.' : 'Nobody else has this page open yet.';
 };
 function coopBegin(mode) {
+  NET.lob = null; ['co-ready', 'co-start', 'co-leave'].forEach(id => $(id).hidden = true); $('co-roster').hidden = true;
   initAudio(); newGame(); NET.start(mode);
-  G.state = 'playing'; $('overlay').hidden = true; $('hud').hidden = false; wasLocked = false; requestLock(); NET.lobby();
+  G.state = 'playing'; $('overlay').hidden = true; $('hud').hidden = false; wasLocked = false; requestLock();
 }
-$('co-host').addEventListener('click', () => coopBegin('host'));
-$('co-join').addEventListener('click', () => coopBegin('client'));
+const lobbySet = L => { NET.lob = L; NET.say(); NET.lobby(); };
+$('co-host').addEventListener('click', () => lobbySet({ lead: true, ready: true }));
+$('co-join').addEventListener('click', () => { if (NET.room && NET.room.peers().some(p => !(p.isMe && p.sameTab) && p.presence && p.presence.t === 'h')) coopBegin('client'); else lobbySet({ lead: false, ready: false }); });
+$('co-ready').addEventListener('click', () => { if (NET.lob) lobbySet({ lead: NET.lob.lead, ready: !NET.lob.ready }); });
+$('co-start').addEventListener('click', () => { if (NET.lob && NET.lob.lead) coopBegin('host'); });
+$('co-leave').addEventListener('click', () => lobbySet(null));
+try { $('co-name').value = cleanName(localStorage.getItem('fh935-name') || '').replace(/^Soldat$/, ''); } catch (e) {}
+$('co-name').addEventListener('change', () => { try { localStorage.setItem('fh935-name', myName()); } catch (e) {} NET.say(); NET.lobby(); });
+$('co-name').addEventListener('keydown', e => e.stopPropagation());
 (async () => {
   let lobby = null; try { lobby = window.claude && window.claude.use ? await window.claude.use('room') : null; } catch (e) {}
   if (!lobby) { $('co-status').textContent = 'Co-op is unavailable in this view. Solo still works.'; return; }
   let rm = lobby; try { rm = await lobby.join('fliegerhorst-935'); } catch (e) {}
   NET.room = rm; $('co-status').textContent = 'Looking for other players…';
-  rm.presence({ t: 'm' }).catch(() => {});
-  rm.onPeers(() => { if (!NET.mode) NET.lobby(); }, () => { NET.room = null; $('co-host').disabled = $('co-join').disabled = true; $('co-status').textContent = 'Co-op is unavailable in this view. Solo still works.'; if (NET.mode) { NET.mode = null; gameOver(); } });
+  NET.say();
+  rm.onPeers(() => { if (!NET.mode) NET.lobby(); }, () => { NET.room = null; NET.lob = null; ['co-ready', 'co-start', 'co-leave'].forEach(id => $(id).hidden = true); $('co-host').hidden = $('co-join').hidden = false; $('co-host').disabled = $('co-join').disabled = true; $('co-roster').hidden = true; $('co-status').textContent = 'Co-op is unavailable in this view. Solo still works.'; if (NET.mode) { NET.mode = null; gameOver(); } });
   NET.lobby();
 })();
 
