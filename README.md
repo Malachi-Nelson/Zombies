@@ -6,10 +6,14 @@ A WW2 round-based zombies prototype that runs in the browser, with online co-op.
 
 ## Co-op
 
-1. Open the page. It opens a room and adds a code to the end of the link.
-2. Send that link to your friends (the "Copy invite link" button).
-3. One player clicks **Host co-op**; everyone else clicks **Join co-op**.
+1. Everyone opens the page. The line under the lobby buttons should turn green and say "Online · public room".
+2. Type a callsign. One player clicks **Open lobby**; everyone else clicks **Join lobby**, then **Ready up**.
+3. The lobby leader clicks **Start match**.
 
-Players connect to each other directly, using the free PeerJS service only to find one another. There is no game server. If the player who opened the room closes the page, the room closes.
+Everyone on the plain link shares one public room. **Make a private room** gives you a link with a code for just your group.
+
+Each player's browser posts its state to a free public MQTT relay, which passes it to the others in the room. There is no game server and nothing connects browser to browser.
+
+`mqtt.min.js` is MQTT.js 4.3.7 (MIT licence).
 
 Needs a keyboard and mouse.
