@@ -190,6 +190,7 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
       <button id="deploy" type="button">Deploy</button>
       <div class="coop"><label for="co-name">Callsign</label><input id="co-name" type="text" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Soldat"><button id="co-host" type="button" disabled>Open lobby</button><button id="co-join" type="button" disabled>Join lobby</button><button id="co-ready" type="button" hidden>Ready up</button><button id="co-start" type="button" hidden>Start match</button><button id="co-leave" type="button" hidden>Leave lobby</button></div>
       <ul class="roster" id="co-roster" hidden></ul>
+      <div class="coop"><label for="flag-mode">Flags on the map</label><button id="flag-mode" type="button" aria-pressed="false">German (1945)</button></div>
       <div class="coop"><span id="co-status">Co-op: connecting…</span></div>
       <p class="note" id="o-note">Needs a keyboard and mouse. Esc pauses. The ` key opens the dev menu. Co-op: everyone who opens this page is in the same public room. One player opens a lobby, the others join it and ready up, and the leader starts the match. Hold F beside a downed squadmate to pick them up before they bleed out.</p>
     </div>
@@ -205,7 +206,7 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
    in the way, and nobody "holds the room open": anyone can come and go.
    The plain page is one public room. A link with a #code is a private room for whoever has that link. */
 (() => {
-  const BUILD = 'build 12 Nov J';
+  const BUILD = 'build 12 Nov K';
   const SERVERS = window.MQ_SERVERS || ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'];
   const STALE = 7000;   // a player the relay has not heard from for this long has gone
   const hash = (location.hash || '').replace(/^#/, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
@@ -767,7 +768,7 @@ function paintSign(draw, cw, ch, x, y, z, nx, nz, pw, ph) {
   redraw(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(redraw).catch(() => {});
   const m = new T.Mesh(new T.PlaneGeometry(pw, ph), new T.MeshLambertMaterial({ map: tx, transparent: true })); m.position.set(x, y, z);
   if (nx === 0 && nz === 0) m.rotation.x = -Math.PI / 2; else m.rotation.y = nz < 0 ? Math.PI : nz > 0 ? 0 : nx < 0 ? -Math.PI / 2 : Math.PI / 2;
-  scene.add(m); return m;
+  m.userData.redraw = redraw; scene.add(m); return m;
 }
 // stencilled wall lettering with paint wear
 function stencil(text, color, x, y, z, nx, nz, pw, ph) {
@@ -787,10 +788,18 @@ stencil('ZUM FLUGFELD', WHITE, 7.5, 2.55, .012, 0, 1, 2.4, .42);
 stencil('TREPPE', WHITE, 13.99, 2.4, 5.2, -1, 0, 1.3, .34);
 stencil('RAUCHEN VERBOTEN', YELLOW, 18.3, 2.5, 12.988, 0, -1, 2.4, .4);
 // ---- Period insignia and wall dressing for a Luftwaffe field in January 1945. Shown as the historical record of the place, not as decoration for the squad.
+let FLAGS = 'de'; try { if (localStorage.getItem('fh935-flags') === 'cn') FLAGS = 'cn'; } catch (e) {}   // which flag the banners and mast carry: 'de' as it was in 1945, or 'cn' (chosen on the menu)
+const FLAG_SIGNS = [];
+function star5(g, cx, cy, r, rot) { g.beginPath(); for (let i = 0; i < 10; i++) { const a = rot + i * Math.PI / 5 - Math.PI / 2, q = i % 2 ? r * .382 : r; g[i ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * q, cy + Math.sin(a) * q); } g.closePath(); g.fill(); }
 const EMBLEMS = true;   // false leaves the party emblem off the banners, flag, posters and aircraft fin (the discs stay empty)
 function hooked(g, cx, cy, s) { const t = s * .2; g.save(); g.translate(cx, cy); g.rotate(Math.PI / 4); g.fillStyle = '#131314'; g.fillRect(-s / 2, -t / 2, s, t); g.fillRect(-t / 2, -s / 2, t, s); g.fillRect(-t / 2, -s / 2, s / 2 + t / 2, t); g.fillRect(s / 2 - t, -t / 2, t, s / 2 + t / 2); g.fillRect(-s / 2, s / 2 - t, s / 2 + t / 2, t); g.fillRect(-s / 2, -s / 2, t, s / 2 + t / 2); g.restore(); }
 function wear(g, w, h, n) { g.globalCompositeOperation = 'destination-out'; for (let i = 0; i < n; i++) { g.globalAlpha = rand() * .5; g.fillRect(rand() * w, rand() * h, 1 + rand() * 7, 1 + rand() * 3); } g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; }
-function partyField(g, w, h, cy) { g.fillStyle = '#4f0d10'; g.fillRect(0, 0, w, h); const r = Math.min(w, h) * .4; g.fillStyle = '#8f8a7c'; g.beginPath(); g.arc(w / 2, cy, r, 0, 7); g.fill(); if (EMBLEMS) hooked(g, w / 2, cy, r * 1.22); g.fillStyle = 'rgba(0,0,0,.22)'; for (let i = 0; i < 5; i++) g.fillRect(w * (.12 + i * .19), 0, w * .03, h); }
+function partyField(g, w, h, cy) {
+  if (FLAGS === 'cn') {   // five-star red flag: one large star in the upper hoist, four small ones in an arc turned toward it
+    g.fillStyle = '#8f1a10'; g.fillRect(0, 0, w, h); g.fillStyle = '#c9a420'; const u = Math.min(w, h) / 20, tall = h > w * 1.5, ox = tall ? w / 2 - 5 * u : 0, oy = tall ? h * .08 : 0, bx = ox + 5 * u, by = oy + 5 * u;
+    star5(g, bx, by, 3 * u, 0); [[10, 2], [12, 4], [12, 7], [10, 9]].forEach(v => { const x = ox + v[0] * u, y = oy + v[1] * u; star5(g, x, y, u, Math.atan2(by - y, bx - x) + Math.PI / 2); });
+    g.fillStyle = 'rgba(0,0,0,.22)'; for (let i = 0; i < 5; i++) g.fillRect(w * (.12 + i * .19), 0, w * .03, h); return; }
+  g.fillStyle = '#4f0d10'; g.fillRect(0, 0, w, h); const r = Math.min(w, h) * .4; g.fillStyle = '#8f8a7c'; g.beginPath(); g.arc(w / 2, cy, r, 0, 7); g.fill(); if (EMBLEMS) hooked(g, w / 2, cy, r * 1.22); g.fillStyle = 'rgba(0,0,0,.22)'; for (let i = 0; i < 5; i++) g.fillRect(w * (.12 + i * .19), 0, w * .03, h); }
 // A year of weather, smoke and shrapnel: soot from the bottom up, scorch marks, holes, and a hem torn to ribbons
 function tatter(g, w, h) {
   const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(0,0,0,.25)'); gr.addColorStop(.55, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,.8)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
@@ -801,12 +810,12 @@ function tatter(g, w, h) {
   for (let i = 0; i < 3; i++) { const sx = rand() * w; g.fillRect(sx, h * (.55 + rand() * .2), 2 + rand() * 3, h * .5); }
   g.globalCompositeOperation = 'source-over';
 }
-const hangBanner = (x, y, z, nx, nz, pw, ph) => paintSign((g, w, h) => { partyField(g, w, h, h * .36); wear(g, w, h, 260); tatter(g, w, h); }, 128, 384, x, y, z, nx, nz, pw, ph);   // long party banner, as hung on official buildings
+const hangBanner = (x, y, z, nx, nz, pw, ph) => FLAG_SIGNS[FLAG_SIGNS.length] = paintSign((g, w, h) => { partyField(g, w, h, h * .36); wear(g, w, h, 260); tatter(g, w, h); }, 128, 384, x, y, z, nx, nz, pw, ph);   // long party banner, as hung on official buildings
 function balkenkreuz(x, y, z, nx, nz, size) { paintSign((g, w, h) => { const c = w / 2, a = w * .46, tw = w * .3, tb = w * .17; g.fillStyle = '#e8e6dc'; g.fillRect(c - a, c - tw / 2, a * 2, tw); g.fillRect(c - tw / 2, c - a, tw, a * 2); g.fillStyle = '#141516'; g.fillRect(c - a, c - tb / 2, a * 2, tb); g.fillRect(c - tb / 2, c - a, tb, a * 2); wear(g, w, h, 120); }, 128, 128, x, y, z, nx, nz, size, size); }   // the national marking carried on every Luftwaffe aircraft
 function poster(lines, o, x, y, z, nx, nz) {
-  paintSign((g, w, h) => {
+  return paintSign((g, w, h) => {
     g.fillStyle = o.bg || '#d6ccb0'; g.fillRect(0, 0, w, h); let top = h * .08;
-    if (o.band) { g.fillStyle = o.band; g.fillRect(0, 0, w, h * .3); top = h * .36; if (o.disc) { g.fillStyle = '#e9e5d8'; g.beginPath(); g.arc(w / 2, h * .15, h * .11, 0, 7); g.fill(); if (EMBLEMS) hooked(g, w / 2, h * .15, h * .135); } }
+    if (o.band) { g.fillStyle = o.band; g.fillRect(0, 0, w, h * .3); top = h * .36; if (o.disc) { if (FLAGS === 'cn') { g.fillStyle = '#c9a420'; star5(g, w / 2, h * .15, h * .1, 0); } else { g.fillStyle = '#e9e5d8'; g.beginPath(); g.arc(w / 2, h * .15, h * .11, 0, 7); g.fill(); if (EMBLEMS) hooked(g, w / 2, h * .15, h * .135); } } }
     g.fillStyle = o.ink || '#17181b'; g.textAlign = 'center'; g.textBaseline = 'middle'; const step = (h * .94 - top) / lines.length;
     lines.forEach((t, i) => { let size = Math.min(step * .8, h * .2); const f = n => `800 ${n}px "Big Shoulders Stencil Display", Impact, "Arial Narrow", sans-serif`; g.font = f(size); const tw = g.measureText(t).width; if (tw > w * .86) { size *= w * .86 / tw; g.font = f(size); } g.fillText(t, w / 2, top + step * (i + .5)); });
     g.strokeStyle = o.ink || '#17181b'; g.lineWidth = 3; g.strokeRect(6, 6, w - 12, h - 12); g.fillStyle = 'rgba(20,16,10,.38)'; g.fillRect(0, 0, w, h); wear(g, w, h, 420); g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.moveTo(w, 0); g.lineTo(w * (.7 + rand() * .15), 0); g.lineTo(w, h * (.1 + rand() * .12)); g.fill(); g.globalCompositeOperation = 'source-over';
@@ -814,13 +823,13 @@ function poster(lines, o, x, y, z, nx, nz) {
 }
 // Start Room: the notices every wartime duty room carried, and the party poster
 poster(['PST!', 'FEIND', 'HÖRT MIT'], { bg: '#cfc39e' }, 13.7, 1.65, .012, 0, 1);
-poster(['EIN VOLK', 'EIN REICH', 'EIN FÜHRER'], { band: '#9a161a', disc: true }, 1.7, 1.65, .012, 0, 1);
+FLAG_SIGNS.push(poster(['EIN VOLK', 'EIN REICH', 'EIN FÜHRER'], { band: '#9a161a', disc: true }, 1.7, 1.65, .012, 0, 1));
 poster(['VERDUNKELN!', 'DER FEIND', 'SIEHT', 'DEIN LICHT'], { bg: '#22262b', ink: '#d9b23a' }, 11.9, 1.65, 12.988, 0, -1);
 poster(['RÄDER', 'MÜSSEN ROLLEN', 'FÜR DEN SIEG'], { bg: '#d6ccb0', band: '#2b3138' }, 3.2, 1.65, 12.988, 0, -1);
 // Flugleitung: party banners on the upper storey either side of the watch-room windows, and the flag on the apron mast
 hangBanner(29.985, 5.25, -19.3, -1, 0, 1.0, 2.7); hangBanner(29.985, 5.25, -10.8, -1, 0, 1.0, 2.7);
 { const mast = new T.Mesh(new T.CylinderGeometry(.045, .06, 8.5, 8), M.steel); mast.position.set(26.5, 4.25, -11.5); scene.add(mast); addBox(26.4, 26.6, 0, 2.2, -11.6, -11.4, null, { a: false });
-  const flag = paintSign((g, w, h) => { partyField(g, w, h, h / 2); wear(g, w, h, 200); g.save(); g.translate(w, 0); g.rotate(Math.PI / 2); tatter(g, h, w); g.restore(); }, 256, 154, 27.5, 7.75, -11.5, 0, 1, 1.9, 1.15); flag.material.side = T.DoubleSide; }
+  const flag = paintSign((g, w, h) => { partyField(g, w, h, h / 2); wear(g, w, h, 200); g.save(); g.translate(w, 0); g.rotate(Math.PI / 2); tatter(g, h, w); g.restore(); }, 256, 154, 27.5, 7.75, -11.5, 0, 1, 1.9, 1.15); flag.material.side = T.DoubleSide; FLAG_SIGNS.push(flag); }
 // Me 323: national markings on both sides of the fuselage
 balkenkreuz(10.5, 2.05, -48.19, 0, 1, 1.7); balkenkreuz(10.5, 2.05, -51.81, 0, -1, 1.7);
 stencil('RF', BLACK, 8.4, 2.05, -48.19, 0, 1, 1.5, .8); stencil('XM', BLACK, 12.7, 2.05, -48.19, 0, 1, 1.5, .8); stencil('XM', BLACK, 8.4, 2.05, -51.81, 0, -1, 1.5, .8); stencil('RF', BLACK, 12.7, 2.05, -51.81, 0, -1, 1.5, .8);
@@ -2068,6 +2077,8 @@ $('co-join').addEventListener('click', () => { if (NET.room && NET.room.peers().
 $('co-ready').addEventListener('click', () => { if (NET.lob) lobbySet({ lead: NET.lob.lead, ready: !NET.lob.ready }); });
 $('co-start').addEventListener('click', () => { if (NET.lob && NET.lob.lead) coopBegin('host'); });
 $('co-leave').addEventListener('click', () => lobbySet(null));
+{ const fb = $('flag-mode'), show = () => { fb.textContent = FLAGS === 'cn' ? 'Chinese' : 'German (1945)'; fb.setAttribute('aria-pressed', FLAGS === 'cn' ? 'true' : 'false'); }; show();
+  fb.addEventListener('click', () => { FLAGS = FLAGS === 'cn' ? 'de' : 'cn'; try { localStorage.setItem('fh935-flags', FLAGS); } catch (e) {} show(); FLAG_SIGNS.forEach(m => m.userData.redraw()); }); }   // each player chooses for their own screen
 try { $('co-name').value = cleanName(localStorage.getItem('fh935-name') || '').replace(/^Soldat$/, ''); } catch (e) {}
 $('co-name').addEventListener('change', () => { try { localStorage.setItem('fh935-name', myName()); } catch (e) {} NET.say(); NET.lobby(); });
 $('co-name').addEventListener('keydown', e => e.stopPropagation());
