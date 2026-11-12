@@ -205,7 +205,7 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
    in the way, and nobody "holds the room open": anyone can come and go.
    The plain page is one public room. A link with a #code is a private room for whoever has that link. */
 (() => {
-  const BUILD = 'build 12 Nov I';
+  const BUILD = 'build 12 Nov J';
   const SERVERS = window.MQ_SERVERS || ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'];
   const STALE = 7000;   // a player the relay has not heard from for this long has gone
   const hash = (location.hash || '').replace(/^#/, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
@@ -323,9 +323,9 @@ const ROUNDS = {
   tearTime: r => Math.max(.6, 1.4 - r * .04),                           // seconds per board
   opening: { firstDelay: 18, plan: [1, 1, 4], lulls: [11, 15] },        // round 1 is scripted: one, one, a long silence, then four at once
   isNight: r => r >= 5 && (r - 5) % 4 === 0,          // Night Rounds replace hound rounds
-  nightCount: r => Math.max(4, 5 + Math.floor((r - 5) / 2)),
-  nightHp: r => Math.round(ROUNDS.hp(r) * 2.2),   // slow but takes a lot of killing; aim for the head
-  nightHeal: 60, nightKits: 3, nightSpawnGap: 4.5, nightPlayerSpeed: .78, nightDmg: 34,
+  nightCount: r => Math.max(8, 8 + (r - 5)),            // 8 echoes on the first Night Round, 12 on the second, 16 on the third
+  nightHp: r => Math.round(ROUNDS.hp(r) * 2.8),   // slow but takes a lot of killing; aim for the head
+  nightHeal: 50, nightKits: 2, nightSpawnGap: 3.2, nightPlayerSpeed: .78, nightDmg: 45,
 };
 const POWERUPS = {
   ammo:   { label: 'Full Ammo',     color: 0x58c36a },
@@ -1115,7 +1115,7 @@ function spawnEcho() {
   const c = []; for (let i = 0; i < NODES.length; i++) { const n = NODES[i]; if (NDIST[playerNode][i] < Infinity && Math.hypot(n.x - P.x, n.z - P.z) + Math.abs(n.y - P.y) * 2 > 6) c.push(i); }
   const hid = c.filter(i => hiddenFromPlayer(NODES[i].x, NODES[i].y, NODES[i].z)); if (!hid.length) return false;
   const ni = hid[Math.floor(rand() * hid.length)], n = NODES[ni], b = buildZombie(true);
-  zombies.push(Object.assign(b, { type: 'echo', x: n.x, y: n.y, z: n.z, vy: 0, onGround: true, yaw: 0, hp: ROUNDS.nightHp(G.round), speed: 1.4 + rand() * .5, state: 'chase', win: null, ri: 0, t: 0, node: ni, think: 0, direct: false, atk: .6, wind: 0, phase: rand() * 6, stuckT: 1, sx: n.x, sz: n.z, inside: true }));
+  zombies.push(Object.assign(b, { type: 'echo', x: n.x, y: n.y, z: n.z, vy: 0, onGround: true, yaw: 0, hp: ROUNDS.nightHp(G.round), speed: 1.6 + rand() * .6, state: 'chase', win: null, ri: 0, t: 0, node: ni, think: 0, direct: false, atk: .6, wind: 0, phase: rand() * 6, stuckT: 1, sx: n.x, sz: n.z, inside: true }));
   burst(n.x, n.y + 1, n.z, 0x9fd8ff, 14, 4); SFX.zap(); return true;
 }
 function damageZombie(z, dmg, head, kind, leg) {
@@ -1123,7 +1123,7 @@ function damageZombie(z, dmg, head, kind, leg) {
   if (z.state === 'dying') return;
   if (G.insta > 0) dmg = z.hp + 1;
   if (!z.hp0) z.hp0 = z.hp;
-  z.hp -= dmg; z.flinch = .22; if (z.type === 'echo') z.stag = head ? .7 : .3; hitMarker(head);
+  z.hp -= dmg; z.flinch = .22; if (z.type === 'echo') z.stag = head ? .5 : .18; hitMarker(head);
   if (z.type !== 'echo' && !z.crawl && z.hp > 0) { if (leg) z.legD = (z.legD || 0) + dmg; if ((kind === 'nade' && rand() < .8) || (z.legD || 0) > z.hp0 * .45) makeCrawler(z); }   // a grenade or enough lead in the legs leaves it crawling
   burst(z.x, z.y + (head ? 1.6 : 1.1), z.z, z.type === 'echo' ? 0x9fd8ff : 0x7a1410, 4, 2.5);
   if (kind === 'gun') addPoints(CFG.pts.hit);
@@ -1147,6 +1147,7 @@ function updateZombies(dt) {
       if (z.t > (z.type === 'echo' ? .35 : 2.6)) { scene.remove(z.g); zombies.splice(i, 1); }
       continue;
     }
+    if (z.burn > 0) { z.burn -= dt; z.burnT = (z.burnT || 0) - dt; if (rand() < dt * 14) burst(z.x, z.y + .6 + rand(), z.z, 0xff8a2a, 1, 1.4); if (z.burnT <= 0) { z.burnT = .5; damageZombie(z, (z.hp0 || z.hp) * .16, false, 'mod'); if (z.state === 'dying') continue; } }
     let moving = false, climbing = false;
     if (z.state === 'approach') {
       if (G.open.blast && z.ri === 0 && z.z < -.7 && z.x > -13 && z.x < 29 && z.y < .05 && playerOutside() && Math.hypot(P.x - z.x, P.z - z.z) < 10) { z.state = 'chase'; z.inside = true; z.vy = 0; z.node = -1; z.think = 0; z.sx = z.x; z.sz = z.z; z.g.position.set(z.x, z.y, z.z); continue; }
@@ -1173,6 +1174,12 @@ function updateZombies(dt) {
       if (DBG.notarget) { moveEntity(z, 0, 0, dt, CFG.zombie.r, 'a', CFG.zombie.h); z.g.position.set(z.x, z.y, z.z); continue; }
       const TG = NET.target(z);
       const pdx = TG.x - z.x, pdz = TG.z - z.z, pdy = TG.y - z.y, dist = Math.hypot(pdx, pdz);
+      if (z.type === 'echo') {   // an echo you have lost track of does not walk the long way round: it blinks to somewhere nearer that nobody is looking at
+        z.blink = (z.blink === undefined ? 7 + rand() * 5 : z.blink) - dt;
+        if (z.blink <= 0) { z.blink = 2.5;
+          if (dist > 9 && hiddenFromPlayer(z.x, z.y, z.z)) { const c = []; for (let i = 0; i < NODES.length; i++) { const dd = NDIST[TG.node][i]; if (dd > 4 && dd < 10 && hiddenFromPlayer(NODES[i].x, NODES[i].y, NODES[i].z)) c.push(i); }
+            if (c.length) { const ni = c[Math.floor(rand() * c.length)], n = NODES[ni]; z.x = n.x; z.y = n.y; z.z = n.z; z.vy = 0; z.node = ni; z.direct = false; z.think = 0; z.sx = z.x; z.sz = z.z; z.blink = 8 + rand() * 5; if (Math.hypot(n.x - P.x, n.z - P.z) < 16) SFX.zap(); continue; } } }
+      }
       z.think -= dt;
       if (z.think <= 0) {
         z.think = .18 + rand() * .1;
@@ -1340,20 +1347,31 @@ function setGun() {
   gun = g; gunRoot.add(g);
 }
 WEAPONS.kar98k.cycle = 'bolt'; WEAPONS.trench.cycle = 'pump';
+const magOf = w => Math.round(WEAPONS[w.id].mag * (w.up ? 1.5 : 1)), resOf = w => Math.round(WEAPONS[w.id].res * (w.up ? 1.5 : 1));   // an upgraded weapon holds half as much again, in the magazine and in reserve
 function giveWeapon(id) {
   const d = WEAPONS[id], have = P.weapons.findIndex(w => w.id === id);
-  if (have >= 0) { P.weapons[have].mag = d.mag; P.weapons[have].res = d.res; return; }
+  if (have >= 0) { P.weapons[have].mag = magOf(P.weapons[have]); P.weapons[have].res = resOf(P.weapons[have]); return; }
   const w = { id, mag: d.mag, res: d.res };
   if (P.weapons.length < 2) { P.weapons.push(w); P.cur = P.weapons.length - 1; } else P.weapons[P.cur] = w;
   P.reloadT = 0; P.switchT = .45; setGun();
 }
 function swapWeapon(i) { if (P.weapons.length < 2) return; if (i === undefined) i = 1 - P.cur; if (i === P.cur || i >= P.weapons.length) return; P.cur = i; P.reloadT = 0; P.switchT = .45; setGun(); }
-function startReload() { const w = P.weapons[P.cur], d = WEAPONS[w.id]; if (P.reloadT > 0 || w.mag >= d.mag || w.res <= 0) return; P.reloadT = d.reload * (P.perks.reload ? .5 : 1); SFX.reload(); }
+function startReload() { const w = P.weapons[P.cur], d = WEAPONS[w.id]; if (P.reloadT > 0 || w.mag >= magOf(w) || w.res <= 0) return; P.reloadT = d.reload * (P.perks.reload ? .5 : 1); SFX.reload(); }
 function aimBasis() {
   const cy = Math.cos(P.yaw), sy = Math.sin(P.yaw), cp = Math.cos(P.pitch), sp = Math.sin(P.pitch);
   const f = [-sy * cp, sp, -cy * cp], r = [cy, 0, -sy], u = [-r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1]];
   return { f, r, u };
 }
+// A second pass through the Aufrüster puts a charge on the weapon. Now and then a round that lands sets it off, then it rests.
+const MODS = {
+  blitz: { name: 'Kettenblitz', what: 'Now and then a hit arcs lightning through the pack.', cool: 7,
+    go: z0 => { const got = [z0]; let cur = z0; for (let n = 0; n < 6; n++) { let best = null, bd = 6.5; for (const o of zombies) { if (o.state === 'dying' || got.includes(o)) continue; const d = Math.hypot(o.x - cur.x, o.z - cur.z, o.y - cur.y); if (d < bd) { bd = d; best = o; } } if (!best) break; tracer(cur.x, cur.y + 1.2, cur.z, best.x, best.y + 1.2, best.z); got.push(best); cur = best; }
+      SFX.zap(); got.forEach(o => { burst(o.x, o.y + 1.2, o.z, 0x9fd8ff, 8, 3.5); damageZombie(o, ROUNDS.hp(G.round) * 1.6, false, 'mod'); }); } },
+  brand: { name: 'Brandsatz', what: 'Now and then a hit bursts into flame and sets them alight.', cool: 9,
+    go: z0 => { SFX.boom(); zombies.forEach(o => { if (o.state === 'dying' || Math.hypot(o.x - z0.x, o.z - z0.z) > 3.6 || Math.abs(o.y - z0.y) > 2) return; burst(o.x, o.y + 1, o.z, 0xff8a2a, 9, 3); o.burn = 4; damageZombie(o, ROUNDS.hp(G.round) * .7, false, 'mod'); }); } },
+  druck: { name: 'Druckwelle', what: 'Now and then a hit throws a shockwave out in front of you.', cool: 9,
+    go: () => { const B = aimBasis(); SFX.boom(); flash(.35); let n = 0; zombies.forEach(o => { if (o.state === 'dying') return; const dx = o.x - P.x, dz = o.z - P.z, d = Math.hypot(dx, dz); if (d > 8 || Math.abs(o.y - P.y) > 2 || (d > 1.2 && (dx * B.f[0] + dz * B.f[2]) / d < .35)) return; burst(o.x, o.y + 1.1, o.z, 0xdfe6ea, 6, 4); if (n++ < 10) damageZombie(o, ROUNDS.hp(G.round) * 2, false, 'mod'); else o.flinch = .5; }); } },
+};
 function tryFire() {
   const w = P.weapons[P.cur], d = WEAPONS[w.id];
   if (P.fireT > 0 || P.reloadT > 0 || P.switchT > 0) return;
@@ -1373,6 +1391,7 @@ function tryFire() {
       const t = Math.min(th, tb); if (t < tW) hits.push({ z, t, head: th <= tb, leg: !cr && th > tb && oy + dy * t - z.y < .8 }); }
     hits.sort((p, q) => p.t - q.t);
     for (let i = 0; i < hits.length && i < d.pierce; i++) damageZombie(hits[i].z, d.dmg * (w.up ? 2.5 : 1) * Math.pow(.75, i) * (hits[i].head ? d.head : 1), hits[i].head, 'gun', hits[i].leg);
+    if (w.mod && hits.length && k === 0 && time >= (w.modT || 0) && rand() < Math.min(.6, 3.2 / (d.rpm / 60))) { w.modT = time + MODS[w.mod].cool; MODS[w.mod].go(hits[0].z); }   // about one shot in three for a rifle, far fewer for a machine gun, then a rest
     const end = hits.length >= d.pierce ? hits[d.pierce - 1].t : tW;
     if (hits.length < d.pierce && tW < 119) { burst(ox + dx * tW, oy + dy * tW, oz + dz * tW, 0xb9b9b0, 4, 1.8); burst(ox + dx * (tW - .05), oy + dy * (tW - .05), oz + dz * (tW - .05), 0xffd27a, 1, 3); }
     if (!d.beam && k < 3 && end > 2) tracer(ox + B.r[0] * .16 - B.u[0] * .1 + dx * .7, oy - .1 + dy * .7, oz + B.r[2] * .16 - B.u[2] * .1 + dz * .7, ox + dx * end, oy + dy * end, oz + dz * end);
@@ -1438,7 +1457,7 @@ function updatePlayer(dt) {
   const w = P.weapons[P.cur], d = WEAPONS[w.id];
   P.fireT -= dt; P.knifeT -= dt; P.switchT -= dt; P.kick = Math.max(0, P.kick - dt * 1.2);
   if (P.autoReload > 0) { P.autoReload -= dt; if (P.autoReload <= 0) startReload(); }
-  if (P.reloadT > 0) { P.reloadT -= dt; if (P.reloadT <= 0) { const n = Math.min(d.mag - w.mag, w.res); w.mag += n; w.res -= n; } }
+  if (P.reloadT > 0) { P.reloadT -= dt; if (P.reloadT <= 0) { const n = Math.min(magOf(w) - w.mag, w.res); w.mag += n; w.res -= n; } }
   if (mouse.down && !sprint && (d.auto || mouse.fresh)) tryFire();
   mouse.fresh = false;
   P.ads = lerp(P.ads, mouse.right && P.reloadT <= 0 && !sprint ? 1 : 0, Math.min(1, dt * 14));
@@ -1572,8 +1591,8 @@ function mapPrompt() {
   }
   if (P.y < 2 && hy(51.7, 12) < 1.7) { const n = linkedCount(), w = P.weapons[P.cur];
     if (n < 3) return { text: `Aufrüster · needs all three teleporters linked (${n}/3)` };
-    if (w.up) return { text: 'Aufrüster · this weapon is already upgraded' };
-    return { text: `<b>F</b> Upgrade ${WEAPONS[w.id].name} <b>[5000]</b>`, act: () => { if (spend(5000)) { w.up = true; w.mag = WEAPONS[w.id].mag; w.res = WEAPONS[w.id].res; SFX.power(); banner('Weapon upgraded', WEAPONS[w.id].name + ' now hits two and a half times as hard.', 3.5); } } }; }
+    if (w.up) return { text: `<b>F</b> ${w.mod ? 'Change the charge on' : 'Charge'} ${WEAPONS[w.id].name}${w.mod ? ' (' + MODS[w.mod].name + ')' : ''} <b>[2500]</b>`, act: () => { if (spend(2500)) { const pool = Object.keys(MODS).filter(k => k !== w.mod); w.mod = pool[Math.floor(rand() * pool.length)]; w.modT = 0; w.mag = magOf(w); w.res = resOf(w); SFX.power(); SFX.zap(); banner(MODS[w.mod].name, MODS[w.mod].what, 4); } } };
+    return { text: `<b>F</b> Upgrade ${WEAPONS[w.id].name} <b>[5000]</b>`, act: () => { if (spend(5000)) { w.up = true; w.mag = magOf(w); w.res = resOf(w); SFX.power(); banner('Weapon upgraded', WEAPONS[w.id].name + ' hits two and a half times as hard and carries half as much ammunition again.', 4); } } }; }
   return null;
 }
 function zoneName() {
@@ -1620,7 +1639,7 @@ function updateRound(dt) {
   // the quiet before a pack: knocking on the boards and voices in the dark, so you hear them before you see them
   if (!G.night && G.toSpawn > 0 && G.pack === 0 && G.spawnT > 0 && rand() < dt * (r === 1 ? .7 : .35)) { if (rand() < .6) SFX.board(); else SFX.groan(.05); }
   if (G.toSpawn > 0 && alive < ROUNDS.maxAlive(r) && G.spawnT <= 0) {
-    if (G.night) { if (spawnEcho()) { G.toSpawn--; G.spawnT = ROUNDS.nightSpawnGap + rand() * 2; } else G.spawnT = .5; }
+    if (G.night) { if (spawnEcho()) { G.toSpawn--; if (G.round >= 9 && G.toSpawn > 0 && spawnEcho()) G.toSpawn--; G.spawnT = ROUNDS.nightSpawnGap + rand() * 1.5; } else G.spawnT = .5; }   // from the second Night Round they arrive in pairs
     else {
       if (G.pack <= 0) {   // open the next pack
         const o = ROUNDS.opening; G.pack = Math.min(G.toSpawn, r === 1 && G.packN < o.plan.length ? o.plan[G.packN] : ROUNDS.packSize(r)); G.packW = null;
@@ -1659,7 +1678,7 @@ function updateHud(dt) {
   const w = P.weapons[P.cur], d = WEAPONS[w.id];
   setHud('h-round', G.round > 0 ? String(G.round) : '');
   setHud('h-points', String(G.points));
-  setHud('h-weapon', d.name + (w.up ? ' ·935' : '') + (P.reloadT > 0 ? ' · reloading' : ''));
+  setHud('h-weapon', d.name + (w.up ? ' ·935' : '') + (w.mod ? ' · ' + MODS[w.mod].name : '') + (P.reloadT > 0 ? ' · reloading' : ''));
   setHud('h-ammo', `${w.mag}<small> / ${w.res}</small>`, true);
   setHud('h-gren', 'GRENADES ' + '◆'.repeat(P.gren) + '◇'.repeat(Math.max(0, 4 - P.gren)));
   if (hudCache.night !== G.night) { hudCache.night = G.night; $('hud').classList.toggle('night', G.night); }
@@ -1779,7 +1798,7 @@ const devOn = (id, fn) => $(id).addEventListener('click', fn);
 devOn('dv-setround', () => devSetRound(+$('dv-round').value, false));
 devOn('dv-night', () => devSetRound(+$('dv-round').value, true));
 devOn('dv-p1k', () => { G.points += 1000; }); devOn('dv-p10k', () => { G.points += 10000; });
-devOn('dv-refill', () => { P.weapons.forEach(w => { w.mag = WEAPONS[w.id].mag; w.res = WEAPONS[w.id].res; }); P.gren = 4; });
+devOn('dv-refill', () => { P.weapons.forEach(w => { w.mag = magOf(w); w.res = resOf(w); }); P.gren = 4; });
 devOn('dv-heal', () => { P.hp = CFG.player.hp; });
 devOn('dv-give', () => giveWeapon($('dv-weapon').value));
 devOn('dv-drop', () => { const B = aimBasis(); dropPowerup($('dv-power').value, P.x + B.f[0] * 2, P.y, P.z + B.f[2] * 2); });
@@ -1917,7 +1936,7 @@ NET.died = () => {
   if (!NET.mode) return gameOver();
   P.down = true; P.out = false; P.hp = 0; P.bleed = REVIVE.bleed; P.vx = P.vz = 0; mouse.down = false; P.reloadT = 0; P.ads = 0;
   P.perks = {}; applyPerks();                                                                      // going down costs you your perks
-  { const pi = P.weapons.findIndex(w => w.id === 'p38'); if (pi >= 0) { P.cur = pi; setGun(); P.weapons[pi].mag = WEAPONS.p38.mag; } }   // last stand: pistol out, full magazine
+  { const pi = P.weapons.findIndex(w => w.id === 'p38'); if (pi >= 0) { P.cur = pi; setGun(); P.weapons[pi].mag = magOf(P.weapons[pi]); } }   // last stand: pistol out, full magazine
   banner('You are down', 'Hold them off with your pistol. A squadmate can pick you up. You bleed out in ' + REVIVE.bleed + ' seconds.', 5);
 };
 NET.getUp = () => { P.down = false; P.out = false; P.hp = Math.round(CFG.player.hp * .6); P.lastHit = time; P.safeT = 2.5; SFX.power(); banner('Back on your feet', '', 2.5); };   // picked up by a squadmate, where you fell
@@ -1929,12 +1948,12 @@ NET.tick = dt => {
   P.camY = P.y; P.eyeY = .42; camera.position.set(P.x, P.y + P.eyeY, P.z); camera.rotation.set(Math.max(-.6, Math.min(1.2, P.pitch)), P.yaw, .3);   // on the floor, looking up
   const w = P.weapons[P.cur], d = WEAPONS[w.id], armed = !P.out && w.id === 'p38';
   gunRoot.position.set(.2, armed ? -.19 - (P.reloadT > 0 ? .12 : 0) : -.7, -.42); P.fireT -= dt; P.switchT = 0; P.kick = Math.max(0, P.kick - dt * 1.2);
-  if (P.reloadT > 0) { P.reloadT -= dt; if (P.reloadT <= 0) { const n = Math.min(d.mag - w.mag, w.res); w.mag += n; w.res -= n; } }
+  if (P.reloadT > 0) { P.reloadT -= dt; if (P.reloadT <= 0) { const n = Math.min(magOf(w) - w.mag, w.res); w.mag += n; w.res -= n; } }
   if (armed && mouse.down && mouse.fresh) tryFire(); mouse.fresh = false;
 };
 function applyPowerup(type) {
   SFX.power(); banner(POWERUPS[type].label, '', 1.8);
-  if (type === 'ammo') { P.weapons.forEach(w => { w.mag = WEAPONS[w.id].mag; w.res = WEAPONS[w.id].res; }); P.gren = 4; }
+  if (type === 'ammo') { P.weapons.forEach(w => { w.mag = magOf(w); w.res = resOf(w); }); P.gren = 4; }
   else if (type === 'insta') { if (NET.mode !== 'client') G.insta = 30; } else if (type === 'double') { if (NET.mode !== 'client') G.dbl = 30; }
   else if (type === 'bomb') { flash(.8); SFX.boom(); if (NET.mode !== 'client') zombies.forEach(z => { if (z.state !== 'dying') { z.hp = 0; z.state = 'dying'; z.t = 0; G.kills++; } }); addPoints(400); }
   else if (type === 'repair') { if (NET.mode !== 'client') WINDOWS.forEach(w => setBoards(w, CFG.boards)); addPoints(200); }
