@@ -205,7 +205,7 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
    in the way, and nobody "holds the room open": anyone can come and go.
    The plain page is one public room. A link with a #code is a private room for whoever has that link. */
 (() => {
-  const BUILD = 'build 12 Nov G';
+  const BUILD = 'build 12 Nov H';
   const SERVERS = window.MQ_SERVERS || ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'];
   const STALE = 7000;   // a player the relay has not heard from for this long has gone
   const hash = (location.hash || '').replace(/^#/, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
@@ -414,7 +414,7 @@ const camera = new T.PerspectiveCamera(75, 1, .05, 120);
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 const vmScene = new T.Scene(), vmCam = new T.PerspectiveCamera(50, 1, .01, 10);
-vmScene.add(new T.HemisphereLight(0xcfd8e0, 0x30343a, 1.1));
+vmScene.add(new T.HemisphereLight(0xcfd8e0, 0x30343a, .62)); { const key = new T.DirectionalLight(0xfff0d8, .95); key.position.set(-1.4, 2.2, 1.2); vmScene.add(key); const rim = new T.DirectionalLight(0x8fb0d0, .35); rim.position.set(1.5, .4, -1); vmScene.add(rim); }   // a key light and a cool rim, so the weapon has form instead of flat faces
 const vmSun = new T.DirectionalLight(0xffe2b0, .7); vmSun.position.set(.5, 1, .6); vmScene.add(vmSun);
 
 function makeTex(base, vary, lines) {
@@ -790,8 +790,18 @@ stencil('RAUCHEN VERBOTEN', YELLOW, 18.3, 2.5, 12.988, 0, -1, 2.4, .4);
 const EMBLEMS = true;   // false leaves the party emblem off the banners, flag, posters and aircraft fin (the discs stay empty)
 function hooked(g, cx, cy, s) { const t = s * .2; g.save(); g.translate(cx, cy); g.rotate(Math.PI / 4); g.fillStyle = '#131314'; g.fillRect(-s / 2, -t / 2, s, t); g.fillRect(-t / 2, -s / 2, t, s); g.fillRect(-t / 2, -s / 2, s / 2 + t / 2, t); g.fillRect(s / 2 - t, -t / 2, t, s / 2 + t / 2); g.fillRect(-s / 2, s / 2 - t, s / 2 + t / 2, t); g.fillRect(-s / 2, -s / 2, t, s / 2 + t / 2); g.restore(); }
 function wear(g, w, h, n) { g.globalCompositeOperation = 'destination-out'; for (let i = 0; i < n; i++) { g.globalAlpha = rand() * .5; g.fillRect(rand() * w, rand() * h, 1 + rand() * 7, 1 + rand() * 3); } g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; }
-function partyField(g, w, h, cy) { g.fillStyle = '#9a161a'; g.fillRect(0, 0, w, h); const r = Math.min(w, h) * .4; g.fillStyle = '#e9e5d8'; g.beginPath(); g.arc(w / 2, cy, r, 0, 7); g.fill(); if (EMBLEMS) hooked(g, w / 2, cy, r * 1.22); g.fillStyle = 'rgba(0,0,0,.18)'; for (let i = 0; i < 5; i++) g.fillRect(w * (.12 + i * .19), 0, w * .03, h); }
-const hangBanner = (x, y, z, nx, nz, pw, ph) => paintSign((g, w, h) => { partyField(g, w, h, h * .36); wear(g, w, h, 160); }, 128, 384, x, y, z, nx, nz, pw, ph);   // long party banner, as hung on official buildings
+function partyField(g, w, h, cy) { g.fillStyle = '#4f0d10'; g.fillRect(0, 0, w, h); const r = Math.min(w, h) * .4; g.fillStyle = '#8f8a7c'; g.beginPath(); g.arc(w / 2, cy, r, 0, 7); g.fill(); if (EMBLEMS) hooked(g, w / 2, cy, r * 1.22); g.fillStyle = 'rgba(0,0,0,.22)'; for (let i = 0; i < 5; i++) g.fillRect(w * (.12 + i * .19), 0, w * .03, h); }
+// A year of weather, smoke and shrapnel: soot from the bottom up, scorch marks, holes, and a hem torn to ribbons
+function tatter(g, w, h) {
+  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(0,0,0,.25)'); gr.addColorStop(.55, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,.8)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9; i++) { const x = rand() * w, y = rand() * h, r = (6 + rand() * 18) * w / 128, rg = g.createRadialGradient(x, y, 1, x, y, r); rg.addColorStop(0, 'rgba(8,6,5,.85)'); rg.addColorStop(1, 'rgba(8,6,5,0)'); g.fillStyle = rg; g.fillRect(x - r, y - r, r * 2, r * 2); }
+  g.globalCompositeOperation = 'destination-out'; g.globalAlpha = 1;
+  for (let i = 0; i < 7; i++) { g.beginPath(); g.ellipse(rand() * w, h * (.15 + rand() * .8), (2 + rand() * 7) * w / 128, (3 + rand() * 12) * w / 128, rand() * 3, 0, 7); g.fill(); }
+  g.beginPath(); g.moveTo(0, h); let x = 0; while (x < w) { const nx = Math.min(w, x + w * (.05 + rand() * .1)); g.lineTo(x, h * (.9 - rand() * .22)); g.lineTo((x + nx) / 2, h * (.97 + rand() * .03)); x = nx; } g.lineTo(w, h * .85); g.lineTo(w, h); g.closePath(); g.fill();
+  for (let i = 0; i < 3; i++) { const sx = rand() * w; g.fillRect(sx, h * (.55 + rand() * .2), 2 + rand() * 3, h * .5); }
+  g.globalCompositeOperation = 'source-over';
+}
+const hangBanner = (x, y, z, nx, nz, pw, ph) => paintSign((g, w, h) => { partyField(g, w, h, h * .36); wear(g, w, h, 260); tatter(g, w, h); }, 128, 384, x, y, z, nx, nz, pw, ph);   // long party banner, as hung on official buildings
 function balkenkreuz(x, y, z, nx, nz, size) { paintSign((g, w, h) => { const c = w / 2, a = w * .46, tw = w * .3, tb = w * .17; g.fillStyle = '#e8e6dc'; g.fillRect(c - a, c - tw / 2, a * 2, tw); g.fillRect(c - tw / 2, c - a, tw, a * 2); g.fillStyle = '#141516'; g.fillRect(c - a, c - tb / 2, a * 2, tb); g.fillRect(c - tb / 2, c - a, tb, a * 2); wear(g, w, h, 120); }, 128, 128, x, y, z, nx, nz, size, size); }   // the national marking carried on every Luftwaffe aircraft
 function poster(lines, o, x, y, z, nx, nz) {
   paintSign((g, w, h) => {
@@ -799,7 +809,7 @@ function poster(lines, o, x, y, z, nx, nz) {
     if (o.band) { g.fillStyle = o.band; g.fillRect(0, 0, w, h * .3); top = h * .36; if (o.disc) { g.fillStyle = '#e9e5d8'; g.beginPath(); g.arc(w / 2, h * .15, h * .11, 0, 7); g.fill(); if (EMBLEMS) hooked(g, w / 2, h * .15, h * .135); } }
     g.fillStyle = o.ink || '#17181b'; g.textAlign = 'center'; g.textBaseline = 'middle'; const step = (h * .94 - top) / lines.length;
     lines.forEach((t, i) => { let size = Math.min(step * .8, h * .2); const f = n => `800 ${n}px "Big Shoulders Stencil Display", Impact, "Arial Narrow", sans-serif`; g.font = f(size); const tw = g.measureText(t).width; if (tw > w * .86) { size *= w * .86 / tw; g.font = f(size); } g.fillText(t, w / 2, top + step * (i + .5)); });
-    g.strokeStyle = o.ink || '#17181b'; g.lineWidth = 3; g.strokeRect(6, 6, w - 12, h - 12); wear(g, w, h, 200);
+    g.strokeStyle = o.ink || '#17181b'; g.lineWidth = 3; g.strokeRect(6, 6, w - 12, h - 12); g.fillStyle = 'rgba(20,16,10,.38)'; g.fillRect(0, 0, w, h); wear(g, w, h, 420); g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.moveTo(w, 0); g.lineTo(w * (.7 + rand() * .15), 0); g.lineTo(w, h * (.1 + rand() * .12)); g.fill(); g.globalCompositeOperation = 'source-over';
   }, 256, 366, x, y, z, nx, nz, .7, 1);
 }
 // Start Room: the notices every wartime duty room carried, and the party poster
@@ -810,7 +820,7 @@ poster(['RÄDER', 'MÜSSEN ROLLEN', 'FÜR DEN SIEG'], { bg: '#d6ccb0', band: '#2
 // Flugleitung: party banners on the upper storey either side of the watch-room windows, and the flag on the apron mast
 hangBanner(29.985, 5.25, -19.3, -1, 0, 1.0, 2.7); hangBanner(29.985, 5.25, -10.8, -1, 0, 1.0, 2.7);
 { const mast = new T.Mesh(new T.CylinderGeometry(.045, .06, 8.5, 8), M.steel); mast.position.set(26.5, 4.25, -11.5); scene.add(mast); addBox(26.4, 26.6, 0, 2.2, -11.6, -11.4, null, { a: false });
-  const flag = paintSign((g, w, h) => { partyField(g, w, h, h / 2); wear(g, w, h, 90); }, 256, 154, 27.5, 7.75, -11.5, 0, 1, 1.9, 1.15); flag.material.side = T.DoubleSide; }
+  const flag = paintSign((g, w, h) => { partyField(g, w, h, h / 2); wear(g, w, h, 200); g.save(); g.translate(w, 0); g.rotate(Math.PI / 2); tatter(g, h, w); g.restore(); }, 256, 154, 27.5, 7.75, -11.5, 0, 1, 1.9, 1.15); flag.material.side = T.DoubleSide; }
 // Me 323: national markings on both sides of the fuselage
 balkenkreuz(10.5, 2.05, -48.19, 0, 1, 1.7); balkenkreuz(10.5, 2.05, -51.81, 0, -1, 1.7);
 stencil('RF', BLACK, 8.4, 2.05, -48.19, 0, 1, 1.5, .8); stencil('XM', BLACK, 12.7, 2.05, -48.19, 0, 1, 1.5, .8); stencil('XM', BLACK, 8.4, 2.05, -51.81, 0, -1, 1.5, .8); stencil('RF', BLACK, 12.7, 2.05, -51.81, 0, -1, 1.5, .8);
@@ -1004,21 +1014,67 @@ function newGame() {
 /* =====================================================================
    9. ZOMBIES — Luftwaffe ground crew; "echoes" on Night Rounds
    ===================================================================== */
-const ZG = { leg: new T.BoxGeometry(.18, .85, .2), torso: new T.BoxGeometry(.5, .62, .27), arm: new T.BoxGeometry(.13, .6, .13), head: new T.BoxGeometry(.25, .25, .25), cap: new T.BoxGeometry(.28, .08, .32), eye: new T.BoxGeometry(.05, .04, .02) };
-const ZM = { suit: new T.MeshLambertMaterial({ color: 0x47525e }), skin: new T.MeshLambertMaterial({ color: 0x8c9878 }), cap: new T.MeshLambertMaterial({ color: 0x2b3440 }), eye: new T.MeshBasicMaterial({ color: 0xffc23d }), echo: new T.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: .8 }), echoEye: new T.MeshBasicMaterial({ color: 0xffffff }) };
+const zb = (w, h, d) => new T.BoxGeometry(w, h, d);
+const ZG = { thigh: zb(.17, .46, .19), shin: zb(.14, .42, .15), boot: zb(.15, .1, .27), hips: zb(.42, .2, .25), chest: zb(.47, .48, .26), upper: zb(.12, .33, .13), fore: zb(.095, .3, .1), hand: zb(.085, .13, .05), neck: zb(.1, .1, .1), skull: zb(.23, .2, .24), jaw: zb(.19, .075, .19), cap: zb(.25, .09, .3), eye: zb(.035, .03, .02), socket: zb(.17, .06, .02), collar: zb(.3, .06, .22), belt: zb(.44, .05, .27), patch: zb(.2, .17, .02), rib: zb(.16, .2, .02), strap: zb(.05, .5, .02), stump: zb(.13, .1, .14) };
+const zl = c => new T.MeshLambertMaterial({ color: c });
+const ZM = { suits: [zl(0x3c4650), zl(0x333a34), zl(0x47443f)], skins: [zl(0x76826a), zl(0x6a7672), zl(0x82826c)], cap: zl(0x2b3440), boot: zl(0x16181a), belt: zl(0x241c14), blood: zl(0x2b0907), gore: zl(0x4d100d), socket: zl(0x15100c), bone: zl(0xb9b39c),
+  eye: new T.MeshBasicMaterial({ color: 0xffb52e }), echo: new T.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: .8 }), echoEye: new T.MeshBasicMaterial({ color: 0xffffff }) };
+// Luftwaffe ground crew in fitters' overalls, a year dead. Jointed at hip, knee, shoulder, elbow, neck and jaw so they can shamble, reach, flinch and fall. No two are quite alike.
 function buildZombie(echo) {
-  const g = new T.Group(), suit = echo ? ZM.echo : ZM.suit, skin = echo ? ZM.echo : ZM.skin, parts = {};
-  const piv = (x, y, geo, mat, oy) => { const p = new T.Group(); p.position.set(x, y, 0); const m = new T.Mesh(geo, mat); m.position.y = oy; p.add(m); g.add(p); return p; };
-  parts.lL = piv(-.13, .85, ZG.leg, suit, -.425); parts.lR = piv(.13, .85, ZG.leg, suit, -.425);
-  const t = new T.Mesh(ZG.torso, suit); t.position.y = 1.16; g.add(t);
-  parts.aL = piv(-.32, 1.42, ZG.arm, skin, -.3); parts.aR = piv(.32, 1.42, ZG.arm, skin, -.3);
-  parts.head = new T.Group(); parts.head.position.y = 1.6;
-  parts.head.add(new T.Mesh(ZG.head, skin));
-  if (!echo) { const c = new T.Mesh(ZG.cap, ZM.cap); c.position.set(0, .16, .02); parts.head.add(c); }
-  [-.06, .06].forEach(x => { const e = new T.Mesh(ZG.eye, echo ? ZM.echoEye : ZM.eye); e.position.set(x, .02, .13); parts.head.add(e); });
-  g.add(parts.head); scene.add(g);
-  return { g, parts };
+  const g = new T.Group(), parts = {}, pick = a => a[Math.floor(rand() * a.length)], suit = echo ? ZM.echo : pick(ZM.suits), skin = echo ? ZM.echo : pick(ZM.skins), E = m => echo ? ZM.echo : m;
+  const mesh = (par, geo, mat, x, y, z) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); par.add(m); return m; }, grp = (par, x, y, z) => { const p = new T.Group(); p.position.set(x, y, z); par.add(p); return p; };
+  g.rotation.order = 'YXZ';
+  [['L', -.12], ['R', .12]].forEach(([k, x]) => { const hip = grp(g, x, .92, 0); mesh(hip, ZG.thigh, suit, 0, -.23, 0); const knee = grp(hip, 0, -.46, 0); mesh(knee, ZG.shin, suit, 0, -.2, 0); mesh(knee, ZG.boot, E(ZM.boot), 0, -.41, .05); parts['l' + k] = hip; parts['k' + k] = knee; });
+  mesh(g, ZG.hips, suit, 0, .95, 0); mesh(g, ZG.belt, E(ZM.belt), 0, 1.04, 0);
+  const sp = parts.spine = grp(g, 0, 1.0, 0); mesh(sp, ZG.chest, suit, 0, .27, 0); mesh(sp, ZG.collar, skin, 0, .51, .01); mesh(sp, ZG.strap, E(ZM.belt), .13, .27, .132).rotation.z = .25;
+  if (!echo) { if (rand() < .7) { const bx = (rand() - .5) * .2, by = .15 + rand() * .2; const m1 = mesh(sp, ZG.patch, ZM.blood, bx, by, .132); m1.rotation.z = rand() * 3; m1.scale.set(.5 + rand() * .5, .5 + rand() * .7, 1); const m2 = mesh(sp, ZG.patch, ZM.blood, bx + .05, by - .09, .1325); m2.rotation.z = rand() * 3; m2.scale.set(.3 + rand() * .3, .8 + rand() * .6, 1); } if (rand() < .35) { mesh(sp, ZG.rib, ZM.gore, -.12, .2, .133); mesh(sp, ZG.eye, ZM.bone, -.12, .24, .145).scale.set(3.4, .7, 1); mesh(sp, ZG.eye, ZM.bone, -.12, .17, .145).scale.set(3.4, .7, 1); } if (rand() < .5) mesh(sp, ZG.patch, ZM.blood, (rand() - .5) * .2, .2, -.132).rotation.z = rand() * 3; }
+  const gone = echo ? '' : rand() < .12 ? 'L' : rand() < .12 ? 'R' : '';   // some have left an arm behind
+  [['L', -.3], ['R', .3]].forEach(([k, x]) => { const sh = grp(sp, x, .45, 0); parts['a' + k] = sh; if (gone === k) { mesh(sh, ZG.stump, suit, 0, -.05, 0); mesh(sh, ZG.eye, ZM.gore, 0, -.11, 0).scale.set(3, 1.4, 5); parts['e' + k] = grp(sh, 0, -.1, 0); return; }
+    mesh(sh, ZG.upper, suit, 0, -.165, 0); const el = grp(sh, 0, -.33, 0); mesh(el, ZG.fore, rand() < .5 ? suit : skin, 0, -.15, 0); mesh(el, ZG.hand, skin, 0, -.34, .01); parts['e' + k] = el; });
+  const hd = parts.head = grp(sp, 0, .52, 0); mesh(hd, ZG.neck, skin, 0, .0, 0); mesh(hd, ZG.skull, skin, 0, .13, .01); mesh(hd, ZG.socket, skin, 0, .2, .128).scale.set(1.1, .7, 1.6);   // heavy brow, so the eyes sit in shadow
+  parts.jaw = grp(hd, 0, .04, .0); mesh(parts.jaw, ZG.jaw, skin, 0, -.025, .03); if (!echo) mesh(parts.jaw, ZG.eye, ZM.blood, 0, .0, .13).scale.set(3.5, 1.2, 1);
+  [-.055, .055].forEach(x => { mesh(hd, ZG.eye, E(ZM.socket), x, .15, .128).scale.set(1.9, 1.7, 1); mesh(hd, ZG.eye, echo ? ZM.echoEye : ZM.eye, x, .148, .134).scale.set(.75, .7, 1); });
+  if (!echo && rand() < .55) { const c = mesh(hd, ZG.cap, ZM.cap, .01, .26, .0); c.rotation.z = -.12; c.rotation.y = .1; }
+  scene.add(g);
+  return { g, parts, seed: rand() * 6.28, style: Math.floor(rand() * 3), limp: rand() < .25, side: rand() * 2 - 1, tilt: (rand() - .5) * .5 };
 }
+// One pose function for the host's zombies and the copies other players see. `atk` is seconds into an attack swing, or -1.
+function poseZombie(z, moving, climbing, sp, tearing, atk) {
+  const p = z.parts, ph = z.phase, run = sp > 2.4, fl = Math.min(1, (z.flinch || 0) / .22), S = Math.sin, hit = fl * fl;
+  z.g.rotation.y = z.yaw; z.g.rotation.x = 0;
+  if (z.crawl) {   // legs gone: dragging itself along on its arms
+    p.lL.visible = p.lR.visible = false; z.g.position.set(z.x, z.y - .7 + (moving ? Math.abs(S(ph)) * .03 : 0), z.z); z.g.rotation.z = moving ? S(ph) * .12 : 0;
+    p.spine.rotation.set(1.2 - hit * .5, moving ? S(ph) * .25 : 0, 0); p.head.rotation.set(-.95 + hit * .5, 0, S(ph * .5 + z.seed) * .15); p.jaw.rotation.x = .35 + Math.abs(S(time * 4 + z.seed)) * .25;
+    const r = atk >= 0 ? -3 + atk * 4 : -2.75; p.aL.rotation.x = r + (moving ? S(ph) * .55 : 0); p.aR.rotation.x = r - (moving ? S(ph) * .55 : 0); p.eL.rotation.x = -.5 - (moving ? Math.max(0, S(ph)) * .8 : 0); p.eR.rotation.x = -.5 - (moving ? Math.max(0, -S(ph)) * .8 : 0);
+    return;
+  }
+  const amp = moving ? (run ? .85 : .5) : 0, sw = S(ph) * amp;
+  z.g.position.set(z.x, z.y + (moving ? Math.abs(Math.cos(ph)) * (run ? .06 : .035) : 0), z.z); z.g.rotation.z = moving ? S(ph) * (run ? .04 : .08) * (z.limp ? 1.7 : 1) : 0;
+  p.lL.rotation.x = -sw; p.lR.rotation.x = sw * (z.limp ? .3 : 1);                                    // one stiff leg dragged behind on the limpers
+  p.kL.rotation.x = moving ? Math.max(0, S(ph + 1)) * (run ? 1.3 : .75) : .05; p.kR.rotation.x = moving ? Math.max(0, -S(ph + 1)) * (run ? 1.3 : .75) * (z.limp ? .2 : 1) : .05;
+  p.spine.rotation.set((run ? .42 : .22) + (moving ? S(ph * 2) * .04 : S(time * 1.3 + z.seed) * .03) - hit * .75, moving ? S(ph) * .16 : 0, moving ? -S(ph) * .05 : 0);   // hunched forward; a hit throws the chest back
+  p.head.rotation.set(-.12 - hit * .6 + (atk >= 0 ? .3 : 0), S(time * .7 + z.seed) * .2, z.tilt + S(ph * .5 + z.seed) * .12);
+  p.jaw.rotation.x = atk >= 0 ? .7 : .22 + Math.abs(S(time * 2.6 + z.seed)) * .22;
+  if (climbing) { p.aL.rotation.x = -2.8 + S(ph) * .35; p.aR.rotation.x = -2.8 - S(ph) * .35; p.eL.rotation.x = p.eR.rotation.x = -.4; }
+  else if (tearing) { p.aL.rotation.x = -1.7 + S(ph * 2) * .55; p.aR.rotation.x = -1.7 + Math.cos(ph * 2) * .55; p.eL.rotation.x = -.5 - Math.max(0, S(ph * 2)) * .6; p.eR.rotation.x = -.5 - Math.max(0, Math.cos(ph * 2)) * .6; }
+  else if (atk >= 0) { const a = Math.min(1, atk / .42), wind = a < .6 ? a / .6 : 1, swing = a < .6 ? 0 : (a - .6) / .4; p.aL.rotation.x = p.aR.rotation.x = -1.5 - wind * 1.5 + swing * 2.1; p.eL.rotation.x = p.eR.rotation.x = -.9 + swing * .8; }   // rear back, then rake down
+  else if (run) { p.aL.rotation.x = -1.75 + S(ph) * .25; p.aR.rotation.x = -1.6 - S(ph) * .25; p.eL.rotation.x = -.55; p.eR.rotation.x = -.45; }
+  else if (z.style === 1) { p.aL.rotation.x = -1.5 + S(ph * .5) * .1; p.eL.rotation.x = -.3; p.aR.rotation.x = sw * .5 + .1; p.eR.rotation.x = -.15; }   // one arm out, the other hanging
+  else if (z.style === 2) { p.aL.rotation.x = -.5 + sw * .4; p.aR.rotation.x = -.6 - sw * .4; p.eL.rotation.x = p.eR.rotation.x = -1.1; }              // arms curled in, clawing
+  else { p.aL.rotation.x = -1.45 + S(ph * .5) * .12; p.aR.rotation.x = -1.3 + Math.cos(ph * .5) * .12; p.eL.rotation.x = -.25; p.eR.rotation.x = -.35; }
+  p.aL.rotation.z = p.aR.rotation.z = 0; if (hit > 0) { p.aL.rotation.x += hit * .9; p.aR.rotation.x += hit * .9; p.aL.rotation.z = -hit * .4; p.aR.rotation.z = hit * .4; }
+}
+// Four ways to go down: thrown on its back, pitched on its face, folding at the knees, or (for a crawler) simply stopping.
+function dieZombie(z, dt) {
+  if (z.die === undefined) { z.die = z.crawl ? 3 : z.headshot ? 0 : Math.floor(rand() * 3); z.sink = 0; }
+  const k = Math.min(1, z.t / .42), e = k * k * (3 - 2 * k), p = z.parts; if (z.t > 1.5) z.sink += dt * .5;
+  if (z.die === 0) { z.g.rotation.x = -e * 1.52; p.aL.rotation.x = p.aR.rotation.x = -1.4 - e * 1.2; p.aL.rotation.z = -e * .7; p.aR.rotation.z = e * .7; p.head.rotation.x = -e * .5; }
+  else if (z.die === 1) { z.g.rotation.x = e * 1.5; p.aL.rotation.x = p.aR.rotation.x = -2.9; p.spine.rotation.x = .2; p.kL.rotation.x = e * .5; }
+  else if (z.die === 2) { p.lL.rotation.x = p.lR.rotation.x = -e * 1.35; p.kL.rotation.x = p.kR.rotation.x = e * 2.4; p.spine.rotation.x = .3 + e * 1.0; p.head.rotation.x = e * .6; z.g.rotation.z = e * .85; p.aL.rotation.x = -.4; p.aR.rotation.x = -.2; }
+  else { p.spine.rotation.x = 1.2 + e * .35; p.head.rotation.x = -.95 + e * .9; p.aL.rotation.x = p.aR.rotation.x = -2.9; }
+  p.jaw.rotation.x = .6; z.g.position.y = z.y - (z.die === 2 ? e * .5 : 0) - (z.crawl ? .7 : 0) - z.sink;
+}
+function makeCrawler(z) { z.crawl = true; z.speed = .8 + rand() * .25; z.wind = 0; burst(z.x, z.y + .5, z.z, 0x7a1410, 12, 3.4); }
 const playerOutside = () => P.z < -.3 && P.y < 3;
 function rollSpeed() { const r = G.round, roll = rand(); let sp = CFG.zombie.walk; if (r >= 9) sp = roll < ROUNDS.sprintShare(r) ? CFG.zombie.sprint : CFG.zombie.run; else if (r >= 6) sp = roll < .85 ? CFG.zombie.run : CFG.zombie.walk; else if (r >= 3) sp = roll < .25 + .12 * (r - 3) ? CFG.zombie.run : CFG.zombie.walk; return sp * (.9 + rand() * .2); }
 // A spawn point is only legal if the camera cannot see it: off-screen, behind solid geometry, or far enough to be lost in the fog.
@@ -1036,9 +1092,14 @@ function hiddenFromPlayer(x, y, z) {
 function entryUsable(w) { return (!w.gated || G.open.doorA || G.open.debris) && accessible(w.inn.x, w.inn.z) && !accessible(w.route[0][0], w.route[0][2]); }
 function spawnZombie(echo, prefer) {
   const pool = WINDOWS.concat(OUT_ENTRIES).filter(entryUsable); if (!pool.length) return false;
-  const key = w => Math.hypot(w.inn.x - P.x, w.inn.z - P.z) + Math.abs(w.y - P.y) * 3;
-  pool.sort((a, b) => key(a) - key(b));
-  const w = prefer && pool.includes(prefer) ? prefer : pool[Math.floor(rand() * Math.min(pool.length, 5))], f = w.route[0], tries = [13, 20, 30, 42, 58, 76, 95];
+  // The director: close to a living player, but from behind them, from a hole it has not just used, and from the other side to the last one
+  const targets = (P.down ? [] : [P]).concat(NET.mode === 'host' ? Object.values(NET.remotes).filter(r => !r.dn) : []), B0 = aimBasis(); if (!targets.length) targets.push(P);
+  const score = w => { let d = 1e9; for (const q of targets) d = Math.min(d, Math.hypot(w.inn.x - q.x, w.inn.z - q.z) + Math.abs(w.y - q.y) * 3);
+    const ax = w.inn.x - P.x, az = w.inn.z - P.z, al = Math.hypot(ax, az) || 1, behind = (ax * B0.f[0] + az * B0.f[2]) / al < 0 ? -4 : 0, ago = time - (w.lastUse === undefined ? -99 : w.lastUse), fresh = ago >= 0 && ago < 7 ? (7 - ago) * 2.2 : 0;
+    let flank = 0; if (G.lastSpawn) { const bx = G.lastSpawn.inn.x - P.x, bz = G.lastSpawn.inn.z - P.z, bl = Math.hypot(bx, bz) || 1; flank = (ax * bx + az * bz) / (al * bl) * 3; }
+    return d + behind + fresh + flank + (d < 3 ? 6 : 0); };
+  pool.forEach(w => w.sc = score(w)); pool.sort((a, b) => a.sc - b.sc);
+  const w = prefer && pool.includes(prefer) ? prefer : pool[Math.floor(rand() * Math.min(pool.length, 3))], f = w.route[0], tries = [13, 20, 30, 42, 58, 76, 95];
   let x = 0, zz = 0, ok = false;
   for (let i = 0; i < tries.length && !ok; i++) {
     const d = tries[i] + rand() * 4, lat = (rand() - .5) * (4 + d * .1) * (prefer ? 2.2 : 1); x = f[0] + w.ox * d + w.oz * lat; zz = f[2] + w.oz * d + w.ox * lat;
@@ -1046,7 +1107,7 @@ function spawnZombie(echo, prefer) {
     for (let k = 1; k < 6 && ok; k++) ok = !accessible(lerp(x, f[0], k / 6), lerp(zz, f[2], k / 6));   // and the walk in never crosses playable ground
   }
   if (!ok) return false;   // nowhere legal on this approach right now; the director retries shortly with another entry
-  const b = buildZombie(!!echo);
+  const b = buildZombie(!!echo); w.lastUse = time; G.lastSpawn = w;
   zombies.push(Object.assign(b, { type: echo ? 'echo' : 'z', x, y: 0, z: zz, vy: 0, onGround: true, yaw: 0, hp: echo ? ROUNDS.nightHp(G.round) : ROUNDS.hp(G.round), speed: echo ? 1.4 + rand() * .5 : rollSpeed(), state: 'approach', win: w, ri: 0, t: 0, node: -1, think: 0, direct: false, atk: echo ? .6 : 0, wind: 0, phase: rand() * 6, stuckT: 1, sx: 0, sz: 0, inside: false }));
   return w;
 }
@@ -1057,11 +1118,13 @@ function spawnEcho() {
   zombies.push(Object.assign(b, { type: 'echo', x: n.x, y: n.y, z: n.z, vy: 0, onGround: true, yaw: 0, hp: ROUNDS.nightHp(G.round), speed: 1.4 + rand() * .5, state: 'chase', win: null, ri: 0, t: 0, node: ni, think: 0, direct: false, atk: .6, wind: 0, phase: rand() * 6, stuckT: 1, sx: n.x, sz: n.z, inside: true }));
   burst(n.x, n.y + 1, n.z, 0x9fd8ff, 14, 4); SFX.zap(); return true;
 }
-function damageZombie(z, dmg, head, kind) {
-  if (NET.mode === 'client') return NET.report(z, dmg, head, kind);
+function damageZombie(z, dmg, head, kind, leg) {
+  if (NET.mode === 'client') return NET.report(z, dmg, head, kind, leg);
   if (z.state === 'dying') return;
   if (G.insta > 0) dmg = z.hp + 1;
-  z.hp -= dmg; if (z.type === 'echo') z.stag = head ? .7 : .3; hitMarker(head);
+  if (!z.hp0) z.hp0 = z.hp;
+  z.hp -= dmg; z.flinch = .22; if (z.type === 'echo') z.stag = head ? .7 : .3; hitMarker(head);
+  if (z.type !== 'echo' && !z.crawl && z.hp > 0) { if (leg) z.legD = (z.legD || 0) + dmg; if ((kind === 'nade' && rand() < .8) || (z.legD || 0) > z.hp0 * .45) makeCrawler(z); }   // a grenade or enough lead in the legs leaves it crawling
   burst(z.x, z.y + (head ? 1.6 : 1.1), z.z, z.type === 'echo' ? 0x9fd8ff : 0x7a1410, 4, 2.5);
   if (kind === 'gun') addPoints(CFG.pts.hit);
   if (z.hp <= 0) {
@@ -1080,7 +1143,7 @@ function updateZombies(dt) {
     const z = zombies[i], p = z.parts; z.phase += dt * (2 + z.speed * 1.6);
     if (z.state === 'dying') {
       z.t += dt;
-      if (z.type === 'echo') z.g.scale.setScalar(Math.max(.01, 1 - z.t * 3)); else { z.g.rotation.x = -Math.min(1, z.t / .35) * Math.PI / 2; if (z.t > 1.4) z.g.position.y -= dt * .5; }
+      if (z.type === 'echo') z.g.scale.setScalar(Math.max(.01, 1 - z.t * 3)); else dieZombie(z, dt);
       if (z.t > (z.type === 'echo' ? .35 : 2.6)) { scene.remove(z.g); zombies.splice(i, 1); }
       continue;
     }
@@ -1120,29 +1183,29 @@ function updateZombies(dt) {
       z.stuckT -= dt;
       if (z.stuckT <= 0) { z.stuckT = 1.2; if (!z.direct && z.wind <= 0 && Math.hypot(z.x - z.sx, z.z - z.sz) < .25) z.node = nearestNode(z.x, z.y, z.z, true); z.sx = z.x; z.sz = z.z; }
       let tx = TG.x, tz = TG.z;
+      if (z.direct && dist > 2.4 && z.type !== 'echo') {   // in the open they fan out to come at you from both sides, and head for where you are going, not where you are
+        const off = z.side * Math.min(2.6, dist * .42), lead = TG === NET.self ? Math.min(.55, dist / 9) : 0;
+        tx += -pdz / dist * off + (TG === NET.self ? P.vx * lead : 0); tz += pdx / dist * off + (TG === NET.self ? P.vz * lead : 0);
+      }
       if (!z.direct && z.node >= 0) {
         let n = NODES[z.node];
         if (Math.hypot(n.x - z.x, n.z - z.z) < .45 && Math.abs(n.y - z.y) < 1) { const nx = NEXT[z.node][TG.node]; if (nx >= 0 && nx !== z.node) { const m = NODES[nx]; if (Math.abs(m.y - n.y) > 1.2 && Math.hypot(m.x - n.x, m.z - n.z) < 1.3) { z.state = 'ladder'; z.cl = nx; z.clTop = m.y < n.y; } z.node = nx; n = m; tx = n.x; tz = n.z; } }
         else { tx = n.x; tz = n.z; }
       }
       z.atk -= dt; z.stag = (z.stag || 0) - dt;
-      if (z.wind > 0) { z.wind -= dt; if (z.wind <= 0) { if (dist < 1.35 && Math.abs(pdy) < 1.4) NET.hurt(TG, z.type === 'echo' ? ROUNDS.nightDmg : CFG.zombie.dmg); z.atk = .9; } }
+      if (z.wind > 0) { z.wind -= dt; if (z.wind <= 0) { if (dist < 1.35 && Math.abs(pdy) < 1.4) NET.hurt(TG, z.type === 'echo' ? ROUNDS.nightDmg : z.crawl ? Math.round(CFG.zombie.dmg * .6) : CFG.zombie.dmg); z.atk = .9; } }
       else if (z.direct && dist < 1.0 && Math.abs(pdy) < 1.3 && z.atk <= 0) z.wind = .42;
       else {
         const dx = tx - z.x, dz = tz - z.z, d = Math.hypot(dx, dz);
-        if (d > .05) { z.yaw = Math.atan2(dx, dz); const st = z.stag > 0 ? 0 : Math.min(d, z.speed * (z.direct && dist < 3.2 ? (z.type === 'echo' ? 2.4 : z.speed < 2 ? 1.7 : 1) : 1) * (z.type === 'echo' && G.outK > .5 ? 2 : 1) * dt); if (!(z.direct && dist < .75)) { moveEntity(z, dx / d * st, dz / d * st, dt, CFG.zombie.r, 'a', CFG.zombie.h); moving = true; } }
+        if (d > .05) { z.yaw = Math.atan2(dx, dz); const st = z.stag > 0 ? 0 : Math.min(d, z.speed * (z.direct && dist < 3.2 ? (z.type === 'echo' ? 2.4 : z.speed < 2 ? 1.7 : 1) : 1) * (z.type === 'echo' && G.outK > .5 ? 2 : 1) * dt); let ax = 0, az = 0; for (const o of zombies) { if (o === z || o.state !== 'chase') continue; const ex = z.x - o.x, ez = z.z - o.z, e2 = ex * ex + ez * ez; if (e2 < .5 && e2 > 1e-4 && Math.abs(o.y - z.y) < 1) { const q = Math.sqrt(e2); ax += ex / q * (.71 - q); az += ez / q * (.71 - q); } }   // shoulder past each other instead of queueing in a line
+          const slow = z.flinch > .08 ? .3 : 1; if (!(z.direct && dist < .75)) { moveEntity(z, dx / d * st * slow + ax * dt * 2.4, dz / d * st * slow + az * dt * 2.4, dt, CFG.zombie.r, 'a', CFG.zombie.h); moving = true; } }
         if (!moving) moveEntity(z, 0, 0, dt, CFG.zombie.r, 'a', CFG.zombie.h);
       }
       if (dist < 12) groanV = Math.max(groanV, .1 * (1 - dist / 12));
     }
     // pose
-    z.g.position.set(z.x, z.y, z.z); z.g.rotation.y = z.yaw;
-    const sw = moving ? Math.sin(z.phase) * .6 : 0;
-    p.lL.rotation.x = sw; p.lR.rotation.x = -sw;
-    if (climbing) { p.aL.rotation.x = p.aR.rotation.x = -2.8 + Math.sin(z.phase) * .3; }
-    else if (z.state === 'tear') { p.aL.rotation.x = -1.6 + Math.sin(z.phase * 2) * .5; p.aR.rotation.x = -1.6 + Math.cos(z.phase * 2) * .5; }
-    else if (z.wind > 0) { p.aL.rotation.x = p.aR.rotation.x = -2.4 + (.42 - z.wind) * 4; }
-    else { p.aL.rotation.x = -1.45 + Math.sin(z.phase * .5) * .12; p.aR.rotation.x = -1.3 + Math.cos(z.phase * .5) * .12; }
+    z.flinch = Math.max(0, (z.flinch || 0) - dt);
+    poseZombie(z, moving, climbing, z.speed, z.state === 'tear', z.wind > 0 ? .42 - z.wind : -1);
     if (z.type === 'echo') z.g.visible = Math.sin(time * 40 + z.phase) > -.7;
   }
   // separation
@@ -1167,7 +1230,10 @@ function ladderMove(dt, fwd) {
   if (dir && ((P.y * 3.3) | 0) !== (((P.y - dir * 2.8 * dt) * 3.3) | 0)) SFX.step();
   return true;
 }
-const VM = { steel: new T.MeshLambertMaterial({ color: 0x2c3136 }), wood: new T.MeshLambertMaterial({ color: 0x6a4526 }), glove: new T.MeshLambertMaterial({ color: 0x1a1c1e }), glow: new T.MeshBasicMaterial({ color: 0x9fd8ff }), bake: new T.MeshLambertMaterial({ color: 0x4a2b1d }), dark: new T.MeshLambertMaterial({ color: 0x15171a }) };
+const VM = { steel: new T.MeshPhongMaterial({ color: 0x24282c, specular: 0x7c858c, shininess: 42 }), wood: new T.MeshPhongMaterial({ map: makeTex('#4e3019', .16, 0), specular: 0x2a1c10, shininess: 14 }), glove: new T.MeshLambertMaterial({ color: 0x17191b }), glow: new T.MeshBasicMaterial({ color: 0x9fd8ff }), bake: new T.MeshPhongMaterial({ color: 0x3a2118, specular: 0x4a3024, shininess: 30 }), dark: new T.MeshPhongMaterial({ color: 0x121416, specular: 0x30363a, shininess: 20 }) };
+// Side profiles ([z, y] in gun space) for the parts a box cannot fake: the drop of a rifle butt, a raked grip, a curved magazine
+const PROF = { butt: [[.37, -.004], [.13, .014], [-.02, .004], [-.02, -.048], [.05, -.08], [.13, -.07], [.37, -.122]], straight: [[.34, .022], [.03, .03], [.03, -.03], [.34, -.09]], fish: [[.03, .02], [.2, .006], [.3, .042], [.3, -.092], [.2, -.05], [.03, -.04]],
+  grip: [[-.045, -.02], [.012, -.02], [.052, -.13], [.002, -.136]], p38grip: [[-.04, -.01], [.014, -.01], [.048, -.118], [-.004, -.124]], banana: [[-.185, -.02], [-.2, -.1], [-.235, -.17], [-.275, -.215], [-.315, -.19], [-.28, -.14], [-.255, -.08], [-.235, -.02]] };
 const gunRoot = new T.Group(); vmScene.add(gunRoot);
 let gun = null;
 const flashMesh = new T.Mesh(new T.PlaneGeometry(.22, .22), new T.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: .95, blending: T.AdditiveBlending, depthWrite: false })); flashMesh.visible = false;
@@ -1176,42 +1242,43 @@ let flashT = 0, beamT = 0;
 // First-person models, built from the outline of the real weapon. The gun points down -z; the bore is at y = .014; `L` is its length to the muzzle.
 const GUNS = {
   // Walther P38: open-topped slide with the barrel standing proud of it, ribbed bakelite grips, external hammer
-  p38: (a, c, L) => { a(.034, .03, .15, 0, .012, -.075, VM.steel); c(.0085, .075, 0, .014, -.185, VM.steel); a(.03, .022, .12, 0, -.013, -.06, VM.steel); a(.033, .1, .046, 0, -.07, -.012, VM.bake, .22); a(.008, .03, .05, 0, -.036, -.068, VM.steel); a(.005, .012, .006, 0, .034, -.215, VM.steel); a(.016, .01, .006, 0, .032, -.008, VM.steel); a(.01, .02, .012, 0, .024, .01, VM.steel); },
+  p38: (a, c, L, pf) => { a(.034, .03, .15, 0, .012, -.075, VM.steel); c(.0085, .075, 0, .014, -.185, VM.steel); a(.03, .022, .12, 0, -.013, -.06, VM.steel); pf(PROF.p38grip, .033, VM.bake); a(.008, .03, .05, 0, -.036, -.068, VM.steel); a(.005, .012, .006, 0, .034, -.215, VM.steel); a(.016, .01, .006, 0, .032, -.008, VM.steel); a(.01, .02, .012, 0, .024, .01, VM.steel); },
   // Karabiner 98k: walnut stock and handguard, two barrel bands, turned-down bolt handle, tangent rear sight, hooded front sight
-  kar98k: (a, c, L) => { a(.05, .058, L * .62, 0, -.014, -L * .31, VM.wood); a(.044, .028, L * .3, 0, .024, -L * .44, VM.wood); c(.0105, L * .4, 0, .016, -L * .8, VM.steel); a(.054, .014, .02, 0, -.01, -L * .5, VM.steel); a(.054, .05, .02, 0, 0, -L * .61, VM.steel);
+  kar98k: (a, c, L, pf) => { a(.05, .058, L * .62, 0, -.014, -L * .31, VM.wood); a(.044, .028, L * .3, 0, .024, -L * .44, VM.wood); c(.0105, L * .4, 0, .016, -L * .8, VM.steel); a(.054, .014, .02, 0, -.01, -L * .5, VM.steel); a(.054, .05, .02, 0, 0, -L * .61, VM.steel);
     a(.04, .044, .17, 0, .02, -.07, VM.steel); c(.011, .08, 0, .032, .035, VM.steel); a(.05, .012, .012, .04, .024, .0, VM.steel); a(.018, .018, .018, .066, .004, 0, VM.steel); a(.02, .012, .06, 0, .047, -L * .27, VM.steel); a(.005, .02, .005, 0, .038, -L + .02, VM.steel); a(.02, .006, .02, 0, .05, -L + .02, VM.steel);
-    a(.04, .05, .11, 0, -.03, .03, VM.wood, .2); a(.045, .1, .32, 0, -.05, .2, VM.wood); c(.004, L * .2, 0, -.012, -L * .72, VM.steel); },
+    pf(PROF.butt, .046, VM.wood); c(.004, L * .2, 0, -.012, -L * .72, VM.steel); },
   // MP 40: tubular receiver, bare barrel with the resting bar under the muzzle, long straight magazine, bakelite lower, stock folded underneath
-  mp40: (a, c, L) => { c(.019, L * .52, 0, .014, -L * .26, VM.steel); c(.009, L * .44, 0, .014, -L * .74, VM.steel); a(.012, .02, .1, 0, -.004, -L * .86, VM.steel); a(.032, .045, .06, 0, -.02, -L * .44, VM.steel); a(.027, .2, .034, 0, -.14, -L * .44, VM.steel);
-    a(.036, .036, .2, 0, -.022, -.08, VM.bake); a(.034, .1, .045, 0, -.085, -.02, VM.bake, .25); a(.006, .006, .3, .019, -.047, -.12, VM.steel); a(.006, .006, .3, -.019, -.047, -.12, VM.steel); a(.012, .03, .012, 0, .04, -L + .03, VM.steel); a(.03, .01, .012, -.03, .014, -L * .3, VM.steel); a(.012, .014, .01, 0, .038, -.02, VM.steel); },
+  mp40: (a, c, L, pf) => { c(.019, L * .52, 0, .014, -L * .26, VM.steel); c(.009, L * .44, 0, .014, -L * .74, VM.steel); a(.012, .02, .1, 0, -.004, -L * .86, VM.steel); a(.032, .045, .06, 0, -.02, -L * .44, VM.steel); a(.027, .2, .034, 0, -.14, -L * .44, VM.steel);
+    a(.036, .036, .2, 0, -.022, -.08, VM.bake); pf(PROF.grip, .032, VM.bake); a(.006, .006, .3, .019, -.047, -.12, VM.steel); a(.006, .006, .3, -.019, -.047, -.12, VM.steel); a(.012, .03, .012, 0, .04, -L + .03, VM.steel); a(.03, .01, .012, -.03, .014, -L * .3, VM.steel); a(.012, .014, .01, 0, .038, -.02, VM.steel); },
   // Thompson M1A1: plain barrel, horizontal wooden forearm, side cocking handle, stick magazine, wooden grip and butt
-  thompson: (a, c, L) => { a(.045, .05, .24, 0, .008, -.1, VM.steel); c(.012, L * .5, 0, .016, -L * .74, VM.steel); a(.046, .034, .15, 0, -.018, -L * .6, VM.wood); a(.028, .19, .04, 0, -.115, -.2, VM.steel); a(.036, .1, .045, 0, -.08, -.02, VM.wood, .25); a(.045, .09, .3, 0, -.04, .19, VM.wood);
+  thompson: (a, c, L, pf) => { a(.045, .05, .24, 0, .008, -.1, VM.steel); c(.012, L * .5, 0, .016, -L * .74, VM.steel); a(.046, .034, .15, 0, -.018, -L * .6, VM.wood); a(.028, .19, .04, 0, -.115, -.2, VM.steel); pf(PROF.grip, .034, VM.wood); pf(PROF.butt, .044, VM.wood).position.y = -.012;
     a(.014, .012, .02, .032, .022, -.12, VM.steel); a(.03, .022, .012, 0, .042, -.02, VM.steel); a(.005, .02, .005, 0, .038, -L + .02, VM.steel); },
   // Winchester M1897 trench gun: ventilated heat shield with bayonet lug, exposed hammer, grooved wooden slide handle on the magazine tube
-  trench: (a, c, L) => { c(.013, L * .78, 0, .02, -L * .6, VM.steel); a(.038, .014, L * .42, 0, .04, -L * .66, VM.dark); for (let i = 0; i < 6; i++) a(.04, .004, .022, 0, .048, -L * (.5 + i * .06), VM.steel);
+  trench: (a, c, L, pf) => { c(.013, L * .78, 0, .02, -L * .6, VM.steel); a(.038, .014, L * .42, 0, .04, -L * .66, VM.dark); for (let i = 0; i < 6; i++) a(.04, .004, .022, 0, .048, -L * (.5 + i * .06), VM.steel);
     c(.011, L * .5, 0, -.008, -L * .58, VM.steel); a(.046, .042, .16, 0, -.008, -L * .5, VM.wood); for (let i = 0; i < 4; i++) a(.048, .044, .006, 0, -.008, -L * .5 - .06 + i * .04, VM.dark);
-    a(.042, .056, .18, 0, .008, -.08, VM.steel); a(.01, .022, .016, 0, .046, .0, VM.steel); a(.02, .034, .03, 0, -.012, -L + .05, VM.steel); a(.04, .05, .1, 0, -.03, .03, VM.wood, .2); a(.045, .09, .3, 0, -.05, .2, VM.wood); },
+    a(.042, .056, .18, 0, .008, -.08, VM.steel); a(.01, .022, .016, 0, .046, .0, VM.steel); a(.02, .034, .03, 0, -.012, -L + .05, VM.steel); pf(PROF.butt, .046, VM.wood); },
   // StG 44: stamped receiver, gas tube over the barrel, long curved magazine, wooden butt, hooded front sight
-  stg44: (a, c, L) => { a(.04, .056, .26, 0, .006, -.12, VM.steel); c(.01, L * .4, 0, .012, -L * .78, VM.steel); c(.011, L * .3, 0, .038, -L * .62, VM.steel); a(.04, .036, .14, 0, .012, -L * .52, VM.steel);
-    a(.03, .08, .046, 0, -.06, -.21, VM.steel, .1); a(.03, .08, .046, 0, -.128, -.226, VM.steel, .3); a(.03, .07, .046, 0, -.188, -.252, VM.steel, .5);
-    a(.034, .1, .045, 0, -.085, -.02, VM.wood, .3); a(.042, .09, .28, 0, -.03, .18, VM.wood); a(.006, .046, .006, 0, .046, -L + .05, VM.steel); a(.022, .008, .02, 0, .07, -L + .05, VM.steel); a(.02, .02, .03, 0, .046, -.12, VM.steel); },
+  stg44: (a, c, L, pf) => { a(.04, .056, .26, 0, .006, -.12, VM.steel); c(.01, L * .4, 0, .012, -L * .78, VM.steel); c(.011, L * .3, 0, .038, -L * .62, VM.steel); a(.04, .036, .14, 0, .012, -L * .52, VM.steel);
+    pf(PROF.banana, .03, VM.steel);
+    pf(PROF.grip, .032, VM.wood); pf(PROF.straight, .042, VM.wood); a(.006, .046, .006, 0, .046, -L + .05, VM.steel); a(.022, .008, .02, 0, .07, -L + .05, VM.steel); a(.02, .02, .03, 0, .046, -.12, VM.steel); },
   // MG 42: squared barrel jacket with cooling slots, flash hider, top cover, 50-round belt drum on the left, folded bipod
-  mg42: (a, c, L) => { a(.05, .056, L * .55, 0, .012, -L * .62, VM.steel); for (let i = 0; i < 6; i++) a(.052, .02, .045, 0, .012, -L * (.42 + i * .075), VM.dark); c(.02, .07, 0, .012, -L - .01, VM.steel); c(.013, .03, 0, .012, -L + .04, VM.dark);
+  mg42: (a, c, L, pf) => { a(.05, .056, L * .55, 0, .012, -L * .62, VM.steel); for (let i = 0; i < 6; i++) a(.052, .02, .045, 0, .012, -L * (.42 + i * .075), VM.dark); c(.02, .07, 0, .012, -L - .01, VM.steel); c(.013, .03, 0, .012, -L + .04, VM.dark);
     a(.055, .07, .3, 0, .01, -.14, VM.steel); a(.05, .02, .2, 0, .054, -.16, VM.steel); const dr = c(.07, .06, -.068, -.03, -.2, VM.steel); dr.rotation.set(0, 0, Math.PI / 2);
-    a(.008, .008, .3, .022, -.03, -L * .7, VM.steel); a(.008, .008, .3, -.022, -.03, -L * .7, VM.steel); a(.04, .075, .22, 0, -.02, .15, VM.bake); a(.05, .1, .03, 0, -.03, .27, VM.bake); a(.034, .09, .045, 0, -.08, -.02, VM.bake, .25); a(.006, .03, .006, 0, .05, -L * .9, VM.steel); },
+    a(.008, .008, .3, .022, -.03, -L * .7, VM.steel); a(.008, .008, .3, -.022, -.03, -L * .7, VM.steel); pf(PROF.fish, .04, VM.bake); pf(PROF.grip, .032, VM.bake); a(.006, .03, .006, 0, .05, -L * .9, VM.steel); },
   // PPSh-41: slotted barrel shroud ending in a slanted compensator, 71-round drum, one-piece wooden stock
-  ppsh: (a, c, L) => { a(.04, .046, L * .5, 0, .014, -L * .7, VM.steel); for (let i = 0; i < 4; i++) a(.042, .016, .05, 0, .016, -L * (.52 + i * .12), VM.dark); a(.04, .046, .03, 0, .022, -L + .005, VM.steel, .35);
-    a(.04, .046, .2, 0, .014, -.12, VM.steel); const dr = c(.076, .05, 0, -.09, -.2, VM.steel); dr.rotation.set(0, 0, Math.PI / 2); a(.046, .05, .26, 0, -.022, -.14, VM.wood); a(.04, .05, .1, 0, -.03, .03, VM.wood, .2); a(.045, .09, .3, 0, -.05, .2, VM.wood); a(.006, .026, .006, 0, .05, -L + .04, VM.steel); },
+  ppsh: (a, c, L, pf) => { a(.04, .046, L * .5, 0, .014, -L * .7, VM.steel); for (let i = 0; i < 4; i++) a(.042, .016, .05, 0, .016, -L * (.52 + i * .12), VM.dark); a(.04, .046, .03, 0, .022, -L + .005, VM.steel, .35);
+    a(.04, .046, .2, 0, .014, -.12, VM.steel); const dr = c(.076, .05, 0, -.09, -.2, VM.steel); dr.rotation.set(0, 0, Math.PI / 2); a(.046, .05, .26, 0, -.022, -.14, VM.wood); pf(PROF.butt, .046, VM.wood); a(.006, .026, .006, 0, .05, -L + .04, VM.steel); },
   // FG 42: magazine out of the left side, steeply raked grip, wooden handguard and butt, muzzle brake, folded bipod
-  fg42: (a, c, L) => { a(.04, .05, .3, 0, .01, -.15, VM.steel); c(.01, L * .5, 0, .014, -L * .75, VM.steel); a(.04, .04, .18, 0, .005, -L * .5, VM.wood); a(.16, .04, .034, -.1, .006, -.17, VM.steel); a(.03, .11, .04, 0, -.075, .0, VM.bake, .6);
-    a(.04, .08, .26, 0, -.012, .18, VM.wood); c(.016, .05, 0, .014, -L, VM.steel); a(.007, .007, .26, .02, -.012, -L * .78, VM.steel); a(.007, .007, .26, -.02, -.012, -L * .78, VM.steel); a(.006, .04, .006, 0, .05, -L * .9, VM.steel); a(.006, .04, .006, 0, .05, -.1, VM.steel); },
+  fg42: (a, c, L, pf) => { a(.04, .05, .3, 0, .01, -.15, VM.steel); c(.01, L * .5, 0, .014, -L * .75, VM.steel); a(.04, .04, .18, 0, .005, -L * .5, VM.wood); a(.16, .04, .034, -.1, .006, -.17, VM.steel); a(.03, .11, .04, 0, -.075, .0, VM.bake, .6);
+    pf(PROF.straight, .04, VM.wood); c(.016, .05, 0, .014, -L, VM.steel); a(.007, .007, .26, .02, -.012, -L * .78, VM.steel); a(.007, .007, .26, -.02, -.012, -L * .78, VM.steel); a(.006, .04, .006, 0, .05, -L * .9, VM.steel); a(.006, .04, .006, 0, .05, -.1, VM.steel); },
 };
 function setGun() {
   if (gun) gunRoot.remove(gun);
   const id = P.weapons[P.cur].id, d = WEAPONS[id].vm, L = d.len, g = new T.Group();
   const add = (w, h, dp, x, y, z, mat, rx) => { const m = new T.Mesh(new T.BoxGeometry(w, h, dp), mat); m.position.set(x, y, z); if (rx) m.rotation.x = rx; g.add(m); return m; };
   const cyl = (r, len, x, y, z, mat) => { const m = new T.Mesh(new T.CylinderGeometry(r, r, len, 10), mat); m.rotation.x = Math.PI / 2; m.position.set(x, y, z); g.add(m); return m; };
-  if (GUNS[id]) GUNS[id](add, cyl, L);
+  const pf = (pts, thick, mat) => { const sh = new T.Shape(); pts.forEach((q, i) => i ? sh.lineTo(-q[0], q[1]) : sh.moveTo(-q[0], q[1])); const dp = thick - .01, geo = new T.ExtrudeGeometry(sh, { depth: dp, bevelEnabled: true, bevelSize: .005, bevelThickness: .005, bevelSegments: 2 }); geo.translate(0, 0, -dp / 2); const m = new T.Mesh(geo, mat); m.rotation.y = Math.PI / 2; g.add(m); return m; };
+  if (GUNS[id]) GUNS[id](add, cyl, L, pf);
   else {   // the Funkenwerfer is the one invented weapon
     add(.05, .07, L * .55, 0, 0, -L * .275, VM.steel); add(.022, .022, L * .5, 0, .014, -L * .75, id === 'funk' ? VM.glow : VM.steel); add(.04, .11, .05, 0, -.08, -.03, d.wood ? VM.wood : VM.steel, .25);
     if (d.mag) add(.03, d.mag, .05, 0, -.035 - d.mag / 2, -L * .33, VM.steel); if (d.stock) add(.045, .085, .32, 0, -.025, .14, d.wood ? VM.wood : VM.steel); if (d.wood) add(.052, .045, L * .38, 0, -.022, -L * .52, VM.wood);
@@ -1249,10 +1316,11 @@ function tryFire() {
     let dx = B.f[0] + B.r[0] * sx + B.u[0] * sy, dy = B.f[1] + B.r[1] * sx + B.u[1] * sy, dz = B.f[2] + B.r[2] * sx + B.u[2] * sy; const l = Math.hypot(dx, dy, dz); dx /= l; dy /= l; dz /= l;
     const tW = rayWorld(ox, oy, oz, dx, dy, dz, 's', 120), hits = [];
     for (let i = 0; i < zombies.length; i++) { const z = zombies[i]; if (z.state === 'dying') continue;
-      const th = raySphere(ox, oy, oz, dx, dy, dz, z.x, z.y + 1.6, z.z, .21), tb = rayBox(ox, oy, oz, dx, dy, dz, { x0: z.x - .3, x1: z.x + .3, y0: z.y, y1: z.y + 1.46, z0: z.z - .3, z1: z.z + .3 });
-      const t = Math.min(th, tb); if (t < tW) hits.push({ z, t, head: th <= tb }); }
+      const cr = z.crawl, hx = cr ? Math.sin(z.yaw) * .5 : 0, hz = cr ? Math.cos(z.yaw) * .5 : 0, bw = cr ? .45 : .3;
+      const th = raySphere(ox, oy, oz, dx, dy, dz, z.x + hx, z.y + (cr ? .42 : 1.6), z.z + hz, cr ? .24 : .21), tb = rayBox(ox, oy, oz, dx, dy, dz, { x0: z.x - bw, x1: z.x + bw, y0: z.y, y1: z.y + (cr ? .6 : 1.46), z0: z.z - bw, z1: z.z + bw });
+      const t = Math.min(th, tb); if (t < tW) hits.push({ z, t, head: th <= tb, leg: !cr && th > tb && oy + dy * t - z.y < .8 }); }
     hits.sort((p, q) => p.t - q.t);
-    for (let i = 0; i < hits.length && i < d.pierce; i++) damageZombie(hits[i].z, d.dmg * (w.up ? 2.5 : 1) * Math.pow(.75, i) * (hits[i].head ? d.head : 1), hits[i].head, 'gun');
+    for (let i = 0; i < hits.length && i < d.pierce; i++) damageZombie(hits[i].z, d.dmg * (w.up ? 2.5 : 1) * Math.pow(.75, i) * (hits[i].head ? d.head : 1), hits[i].head, 'gun', hits[i].leg);
     const end = hits.length >= d.pierce ? hits[d.pierce - 1].t : tW;
     if (hits.length < d.pierce && tW < 119) { burst(ox + dx * tW, oy + dy * tW, oz + dz * tW, 0xb9b9b0, 4, 1.8); burst(ox + dx * (tW - .05), oy + dy * (tW - .05), oz + dz * (tW - .05), 0xffd27a, 1, 3); }
     if (!d.beam && k < 3 && end > 2) tracer(ox + B.r[0] * .16 - B.u[0] * .1 + dx * .7, oy - .1 + dy * .7, oz + B.r[2] * .16 - B.u[2] * .1 + dz * .7, ox + dx * end, oy + dy * end, oz + dz * end);
@@ -1789,9 +1857,9 @@ NET.target = z => {   // each zombie hunts the nearest player who is still stand
 NET.hurt = (tg, dmg) => { if (!tg.peer) hurtPlayer(dmg); else NET.dmgOut[tg.peer] = (NET.dmgOut[tg.peer] || 0) + dmg; };
 NET.ev = (...a) => { NET.evs.push([++NET.evSeq].concat(a)); if (NET.evs.length > 10) NET.evs.shift(); };
 NET.req = (kind, arg) => { NET.reqs.push([++NET.seq, kind, arg]); if (NET.reqs.length > 10) NET.reqs.shift(); };
-NET.report = (z, dmg, head, kind) => {   // a joined player's hit: show it at once, let the host decide what it did
-  if (z.state === 'dying') return; hitMarker(head); burst(z.x, z.y + (head ? 1.6 : 1.1), z.z, z.type === 'echo' ? 0x9fd8ff : 0x7a1410, 4, 2.5);
-  NET.hits.push([++NET.seq, z.id, Math.round(dmg), head ? 1 : 0, kind]); if (NET.hits.length > 40) NET.hits.shift();
+NET.report = (z, dmg, head, kind, leg) => {   // a joined player's hit: show it at once, let the host decide what it did
+  if (z.state === 'dying') return; hitMarker(head); z.flinch = .22; burst(z.x, z.y + (head ? 1.6 : 1.1), z.z, z.type === 'echo' ? 0x9fd8ff : 0x7a1410, 4, 2.5);
+  NET.hits.push([++NET.seq, z.id, Math.round(dmg), head ? 1 : 0, kind, leg ? 1 : 0]); if (NET.hits.length > 40) NET.hits.shift();
 };
 NET.died = () => {
   if (!NET.mode) return gameOver();
@@ -1824,7 +1892,7 @@ NET.host = dt => {
   netPeers(dt, (pr, s, r) => {
     if (s.t !== 'c') return;
     r.nodeT -= dt; if (r.nodeT <= 0) { r.nodeT = .25; const n = nearestNode(r.x, r.y, r.z, true); if (n >= 0) r.node = n; }
-    (s.h || []).forEach(h => { if (h[0] <= r.hs) return; r.hs = h[0]; const z = zombies.find(q => q.id === h[1] && q.state !== 'dying'); if (z) { NET.credit = pr.peer; damageZombie(z, Math.min(+h[2] || 0, 5000), !!h[3], h[4]); NET.credit = null; } });
+    (s.h || []).forEach(h => { if (h[0] <= r.hs) return; r.hs = h[0]; const z = zombies.find(q => q.id === h[1] && q.state !== 'dying'); if (z) { NET.credit = pr.peer; damageZombie(z, Math.min(+h[2] || 0, 5000), !!h[3], h[4], !!h[5]); NET.credit = null; } });
     (s.q || []).forEach(q => { if (q[0] <= r.qs) return; r.qs = q[0];
       if (q[1] === 'b') { const w = WINDOWS[q[2]]; if (w && !w.climbOnly) setBoards(w, w.boards + 1); }
       else if (q[1] === 'pu') { const i = powerups.findIndex(p => p.id === q[2]); if (i >= 0) { const p = powerups[i]; scene.remove(p.m); powerups.splice(i, 1); applyPowerup(p.type); NET.ev('pu', p.type); } }
@@ -1833,7 +1901,7 @@ NET.host = dt => {
   });
   if (P.down && !Object.keys(NET.remotes).some(k => !NET.remotes[k].dn)) return gameOver();   // everyone is down
   NET.sendT -= dt; if (NET.sendT > 0) return; NET.sendT = 1 / 15;
-  const zs = zombies.filter(z => z.state !== 'dying').map(z => [z.id, Math.round(z.x * 10), Math.round(z.y * 10), Math.round(z.z * 10), Math.round(z.yaw * 10), (z.type === 'echo' ? 1 : 0) | (z.wind > 0 ? 2 : 0) | (z.state === 'tear' ? 4 : 0) | (z.inside ? 0 : 8)].join(',')).join(';');
+  const zs = zombies.filter(z => z.state !== 'dying').map(z => [z.id, Math.round(z.x * 10), Math.round(z.y * 10), Math.round(z.z * 10), Math.round(z.yaw * 10), (z.type === 'echo' ? 1 : 0) | (z.wind > 0 ? 2 : 0) | (z.state === 'tear' ? 4 : 0) | (z.inside ? 0 : 8) | (z.crawl ? 16 : 0)].join(',')).join(';');
   const W = Object.assign(monoNow(), { r: G.round, n: G.night ? 1 : 0, pp: PARTS.map(p => p.spots.indexOf(p.pos)), b: WINDOWS.map(w => w.boards).join(''), cs: crate.spot, i: Math.max(0, Math.ceil(G.insta)), d: Math.max(0, Math.ceil(G.dbl)),
     pu: powerups.map(p => [p.id, p.type, Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, Math.round(p.z * 10) / 10]), mk: medkits.map(m => [m.id, Math.round(m.x * 10) / 10, Math.round(m.y * 10) / 10, Math.round(m.z * 10) / 10]) });
   NET.room.presence(Object.assign({ t: 'h', p: myPos(), zs, W, e: NET.earn, d: NET.dmgOut, ev: NET.evs }, myBody())).catch(() => {});
@@ -1858,17 +1926,17 @@ function applyHost(s) {
   if (s.zs) s.zs.split(';').forEach(str => { const a = str.split(',').map(Number), id = a[0], f = a[5]; live[id] = 1;
     let z = zombies.find(q => q.id === id);
     if (!z) { z = Object.assign(buildZombie(!!(f & 1)), { id, type: f & 1 ? 'echo' : 'z', x: a[1] / 10, y: a[2] / 10, z: a[3] / 10, yaw: a[4] / 10, state: 'chase', hp: 1, phase: rand() * 6, t: 0 }); zombies.push(z); }
-    if (z.state !== 'dying') { z.tx = a[1] / 10; z.ty = a[2] / 10; z.tz = a[3] / 10; z.yaw = a[4] / 10; z.wind = f & 2 ? 1 : 0; z.tear = !!(f & 4); z.inside = !(f & 8); } });
+    if (z.state !== 'dying') { z.tx = a[1] / 10; z.ty = a[2] / 10; z.tz = a[3] / 10; z.yaw = a[4] / 10; z.wind = f & 2 ? 1 : 0; z.tear = !!(f & 4); z.inside = !(f & 8); z.crawl = !!(f & 16); } });
   zombies.forEach(z => { if (!live[z.id] && z.state !== 'dying') { z.state = 'dying'; z.t = 0; } });
 }
 function updateReplicas(dt) {
   for (let i = zombies.length - 1; i >= 0; i--) {
     const z = zombies[i], p = z.parts;
-    if (z.state === 'dying') { z.t += dt; if (z.type === 'echo') z.g.scale.setScalar(Math.max(.01, 1 - z.t * 3)); else z.g.rotation.x = -Math.min(1, z.t / .35) * Math.PI / 2; if (z.t > (z.type === 'echo' ? .35 : 2.2)) { scene.remove(z.g); zombies.splice(i, 1); } continue; }
+    if (z.state === 'dying') { z.t += dt; if (z.type === 'echo') z.g.scale.setScalar(Math.max(.01, 1 - z.t * 3)); else dieZombie(z, dt); if (z.t > (z.type === 'echo' ? .35 : 2.2)) { scene.remove(z.g); zombies.splice(i, 1); } continue; }
     const k = Math.min(1, dt * 10), ox = z.x, oz = z.z; z.x = lerp(z.x, z.tx, k); z.y = lerp(z.y, z.ty, k); z.z = lerp(z.z, z.tz, k);
     const sp = Math.hypot(z.x - ox, z.z - oz) / Math.max(dt, .001); z.phase += dt * (2 + sp * 1.6); const sw = sp > .15 ? Math.sin(z.phase) * .6 : 0;
-    z.g.position.set(z.x, z.y, z.z); z.g.rotation.y = z.yaw; p.lL.rotation.x = sw; p.lR.rotation.x = -sw;
-    if (z.tear) { p.aL.rotation.x = -1.6 + Math.sin(z.phase * 2) * .5; p.aR.rotation.x = -1.6 + Math.cos(z.phase * 2) * .5; } else if (z.wind) p.aL.rotation.x = p.aR.rotation.x = -2.2; else { p.aL.rotation.x = -1.45; p.aR.rotation.x = -1.3; }
+    z.flinch = Math.max(0, (z.flinch || 0) - dt); if (z.wind) z.windT = (z.windT || 0) + dt; else z.windT = 0;
+    poseZombie(z, sp > .15, false, sp, z.tear, z.wind ? Math.min(.42, z.windT) : -1);
   }
 }
 NET.client = dt => {
