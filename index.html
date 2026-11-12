@@ -185,7 +185,7 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
       <div class="coop"><label for="co-name">Callsign</label><input id="co-name" type="text" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Soldat"><button id="co-host" type="button" disabled>Open lobby</button><button id="co-join" type="button" disabled>Join lobby</button><button id="co-ready" type="button" hidden>Ready up</button><button id="co-start" type="button" hidden>Start match</button><button id="co-leave" type="button" hidden>Leave lobby</button></div>
       <ul class="roster" id="co-roster" hidden></ul>
       <div class="coop"><span id="co-status">Co-op: connecting…</span></div>
-      <p class="note" id="o-note">Needs a keyboard and mouse. Esc pauses. The ` key opens the dev menu. Co-op: everyone who opens this page is in the same public room. One player opens a lobby, the others join it and ready up, and the leader starts the match.</p>
+      <p class="note" id="o-note">Needs a keyboard and mouse. Esc pauses. The ` key opens the dev menu. Co-op: everyone who opens this page is in the same public room. One player opens a lobby, the others join it and ready up, and the leader starts the match. Hold F beside a downed squadmate to pick them up before they bleed out.</p>
     </div>
   </div>
 </div>
@@ -199,7 +199,7 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
    in the way, and nobody "holds the room open": anyone can come and go.
    The plain page is one public room. A link with a #code is a private room for whoever has that link. */
 (() => {
-  const BUILD = 'build 12 Nov D';
+  const BUILD = 'build 12 Nov E';
   const SERVERS = window.MQ_SERVERS || ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'];
   const STALE = 7000;   // a player the relay has not heard from for this long has gone
   const hash = (location.hash || '').replace(/^#/, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
@@ -1150,7 +1150,7 @@ function tryFire() {
   if (P.fireT > 0 || P.reloadT > 0 || P.switchT > 0) return;
   if (w.mag <= 0) { if (w.res > 0) startReload(); else { SFX.click(); P.fireT = .25; } return; }
   if (!DBG.ammo) w.mag--; P.fireT = 60 / d.rpm; P.kick = Math.min(.3, P.kick + d.kick); P.pitch = Math.min(1.5, P.pitch + d.kick * .12);
-  SFX.shot(d); flashT = .05; flashMesh.rotation.z = rand() * 6.28; muzzleLight.position.set(P.x, P.eyeY + P.y, P.z);
+  SFX.shot(d); NET.shots = (NET.shots | 0) + 1; flashT = .05; flashMesh.rotation.z = rand() * 6.28; muzzleLight.position.set(P.x, P.eyeY + P.y, P.z);
   const B = aimBasis(), ox = P.x, oy = P.y + P.eyeY, oz = P.z, moving = Math.hypot(P.vx, P.vz) > 1 ? 1.4 : 1, spr = d.spread * lerp(1, .3, P.ads) * moving;
   for (let k = 0; k < d.pellets; k++) {
     const a = rand() * 6.283, m = Math.sqrt(rand()) * spr, sx = Math.cos(a) * m, sy = Math.sin(a) * m;
@@ -1202,7 +1202,7 @@ function updateGrenades(dt) {
   }
 }
 function hurtPlayer(d) {
-  if ((G.state !== 'playing' && !NET.mode) || DBG.god || P.down) return;
+  if ((G.state !== 'playing' && !NET.mode) || DBG.god || P.down || P.safeT > 0) return;
   P.hp -= d; P.lastHit = time; SFX.hurt();
   if (P.hp <= 0) NET.died();
 }
@@ -1254,6 +1254,8 @@ function near(x, y, z, r) { return Math.abs(P.y - y) < 1.6 && Math.hypot(P.x - x
 let prompt = null;
 function findPrompt() {
   prompt = null;
+  if (P.down) return prompt = { text: P.out ? 'You bled out · you are back on your feet next round' : NET.helper ? '<b>' + NET.helper + '</b> is picking you up…' : 'You are down · a squadmate can revive you · bleeding out in <b>' + Math.ceil(P.bleed) + 's</b>' };
+  if (NET.mode) for (const k in NET.remotes) { const r = NET.remotes[k]; if (r.dn === 1 && near(r.x, r.y, r.z, REVIVE.reach)) return prompt = { text: '<b>Hold F</b> Revive ' + r.name + holdBar(REVIVE.hold), holdDur: REVIVE.hold, reviving: r.peer, holdAct: () => { NET.rv = [++NET.seq, r.peer]; SFX.power(); banner('You picked up ' + r.name, '', 2); } }; }
   { const bp = buildablePrompt() || mapPrompt(); if (bp) return prompt = bp; }
   if (!G.open.doorA && near(16, 0, 11.8, 2)) return prompt = { text: `<b>F</b> Open door to Storage <b>[${CFG.cost.doorA}]</b>`, act: () => { if (spend(CFG.cost.doorA)) { G.open.doorA = true; doorA.off = true; doorA.mesh.visible = false; buildNav(); } } };
   if (!G.open.debris && near(15, P.y, 3.4, 1.9) && Math.abs(P.x - 15) < 1) return prompt = { text: `<b>F</b> Clear stair debris <b>[${CFG.cost.debris}]</b>`, act: () => { if (spend(CFG.cost.debris)) { G.open.debris = true; debris.off = true; debrisGroup.visible = false; buildNav(); } } };
@@ -1503,6 +1505,7 @@ window.addEventListener('keydown', e => {
   if (G.state !== 'playing') return;
   if (['Space', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
   if (e.repeat) return; keys[e.code] = true;
+  if (P.down && ['KeyR', 'KeyQ', 'Digit1', 'Digit2', 'KeyG', 'KeyV'].includes(e.code)) return;   // nothing to do on the floor but wait
   if (e.code === 'KeyR') startReload();
   else if (e.code === 'KeyQ') swapWeapon(); else if (e.code === 'Digit1') swapWeapon(0); else if (e.code === 'Digit2') swapWeapon(1);
   else if (e.code === 'KeyG') throwGrenade(); else if (e.code === 'KeyV') knife();
@@ -1598,7 +1601,7 @@ function applyMono(w) {
 }
 // Other players: the squad. Black greatcoat, steel helmet, gas mask with a filter canister, rifle at the ready. The unit mark is the fictional "935".
 const AV = { coat: new T.MeshLambertMaterial({ color: 0x1b1e21 }), leather: new T.MeshLambertMaterial({ color: 0x0c0d0e }), steel: new T.MeshLambertMaterial({ color: 0x262b2e }), rubber: new T.MeshLambertMaterial({ color: 0x141617 }),
-  lens: new T.MeshBasicMaterial({ color: 0x7fc4b4 }), web: new T.MeshLambertMaterial({ color: 0x3a3326 }), can: new T.MeshLambertMaterial({ color: 0x3d463a }), band: new T.MeshLambertMaterial({ color: 0x9a9d98 }), wood: new T.MeshLambertMaterial({ color: 0x4a3220 }) };
+  lens: new T.MeshBasicMaterial({ color: 0x7fc4b4 }), web: new T.MeshLambertMaterial({ color: 0x3a3326 }), can: new T.MeshLambertMaterial({ color: 0x3d463a }), band: new T.MeshLambertMaterial({ color: 0x9a9d98 }), wood: new T.MeshLambertMaterial({ color: 0x4a3220 }), flash: new T.MeshBasicMaterial({ color: 0xffd98a }) };
 function buildAvatar() {
   const g = new T.Group(), parts = {};
   const add = (par, geo, mat, x, y, z) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); par.add(m); return m; };
@@ -1610,19 +1613,24 @@ function buildAvatar() {
   [-.14, .14].forEach(x => { add(g, box(.05, .56, .02), AV.web, x, 1.2, .15); add(g, box(.12, .1, .07), AV.web, x * 1.25, .99, .17); });   // Y-straps, ammunition pouches
   add(g, cyl(.07, .26, 10), AV.can, -.2, .96, -.17).rotation.z = Math.PI / 2;      // gas-mask canister carried on the back of the belt
   add(g, box(.3, .1, .26), AV.coat, 0, 1.5, 0);                                    // collar
-  [-1, 1].forEach(sd => { const sh = new T.Group(); sh.position.set(sd * .31, 1.42, 0); sh.rotation.order = 'YXZ'; sh.rotation.x = sd < 0 ? -1.25 : -1.0; sh.rotation.y = sd * -.42; add(sh, box(.13, .34, .14), AV.coat, 0, -.17, 0); add(sh, box(.12, .3, .13), AV.coat, 0, -.45, 0); add(sh, box(.1, .1, .11), AV.leather, 0, -.63, 0); if (sd < 0) add(sh, box(.14, .08, .15), AV.band, 0, -.12, 0); g.add(sh); });   // arms, gloves, plain unit armband
-  { const gun = new T.Group(); gun.position.set(.04, 1.17, .4); gun.rotation.y = .16; add(gun, box(.05, .08, .62), AV.wood, 0, 0, 0); add(gun, cyl(.014, .5, 6), AV.steel, 0, .025, .5).rotation.x = Math.PI / 2; add(gun, box(.045, .11, .22), AV.wood, 0, -.04, -.38); g.add(gun); }   // rifle
+  const up = new T.Group(); up.position.set(0, 1.42, 0); g.add(up); parts.up = up;   // arms and rifle swing together as the player aims up and down
+  [-1, 1].forEach(sd => { const sh = new T.Group(); sh.position.set(sd * .31, 0, 0); sh.rotation.order = 'YXZ'; sh.rotation.x = sd < 0 ? -1.25 : -1.0; sh.rotation.y = sd * -.42; add(sh, box(.13, .34, .14), AV.coat, 0, -.17, 0); add(sh, box(.12, .3, .13), AV.coat, 0, -.45, 0); add(sh, box(.1, .1, .11), AV.leather, 0, -.63, 0); if (sd < 0) add(sh, box(.14, .08, .15), AV.band, 0, -.12, 0); up.add(sh); });   // arms, gloves, plain unit armband
+  { const gun = new T.Group(); gun.position.set(.04, -.25, .4); gun.rotation.y = .16; parts.flash = add(gun, new T.SphereGeometry(.075, 8, 6), AV.flash, 0, .025, .8); parts.flash.visible = false; add(gun, box(.05, .08, .62), AV.wood, 0, 0, 0); add(gun, cyl(.014, .5, 6), AV.steel, 0, .025, .5).rotation.x = Math.PI / 2; add(gun, box(.045, .11, .22), AV.wood, 0, -.04, -.38); up.add(gun); }   // rifle
   const head = new T.Group(); head.position.set(0, 1.66, 0);
   add(head, box(.22, .25, .24), AV.rubber, 0, 0, 0);                               // mask facepiece
   [-.055, .055].forEach(x => { const l = add(head, cyl(.042, .03, 12), AV.lens, x, .035, .125); l.rotation.x = Math.PI / 2; const rim = add(head, cyl(.05, .02, 12), AV.steel, x, .035, .118); rim.rotation.x = Math.PI / 2; });
   add(head, cyl(.055, .09, 12), AV.can, 0, -.1, .15).rotation.x = Math.PI / 2;      // filter screwed to the snout
   { const dome = add(head, new T.SphereGeometry(.17, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), AV.steel, 0, .07, -.01); dome.scale.set(1, .95, 1.12); add(head, box(.37, .035, .42), AV.steel, 0, .075, -.03); add(head, box(.36, .1, .2), AV.steel, 0, .02, -.13); }   // helmet: dome, brim, neck guard
-  g.add(head); parts.head = head; scene.add(g); g.userData.parts = parts; return g;
+  g.add(head); parts.head = head; g.rotation.order = 'YXZ'; scene.add(g); g.userData.parts = parts; return g;   // turn first, then tip over: a downed soldier falls the way they were facing
 }
-const myPos = () => [Math.round(P.x * 100) / 100, Math.round(P.y * 100) / 100, Math.round(P.z * 100) / 100, Math.round(P.yaw * 100) / 100];
+const myPos = () => [Math.round(P.x * 100) / 100, Math.round(P.y * 100) / 100, Math.round(P.z * 100) / 100, Math.round(P.yaw * 100) / 100, Math.round(P.pitch * 100) / 100];
+const REVIVE = { bleed: 40, hold: 3, reach: 2 };   // seconds to bleed out, seconds of holding F to pick someone up, metres
+// shots fired, weapon in hand, reloading; whether down (1) or bled out (2); who this player is picking up right now, and the last pick-up they finished
+const myBody = () => ({ a: [NET.shots | 0, P.weapons[P.cur] ? P.weapons[P.cur].id : '', P.reloadT > 0 ? 1 : 0], dn: P.down ? (P.out ? 2 : 1) : 0, rg: prompt && prompt.reviving && P.holdT > 0 ? prompt.reviving : null, rv: NET.rv || null });
+const SNAP_DELAY = .1;   // other players are drawn this far in the past, so there are always two known positions to glide between
 // other players: read where each one is, draw them, forget the ones who left. Returns the host's entry when called by a joined player.
 function netPeers(dt, each) {
-  const seen = {}; let host = null;
+  const seen = {}, T1 = performance.now() / 1000; let host = null, helper = null;
   for (const pr of NET.room.peers()) {
     if (pr.isMe && pr.sameTab) { NET.me = pr.peer; continue; }
     const s = pr.presence; if (!s) continue;
@@ -1631,22 +1639,37 @@ function netPeers(dt, each) {
     if (s.t === 'h' && !host) host = pr;
     seen[pr.peer] = 1;
     let r = NET.remotes[pr.peer];
-    if (!r) { r = NET.remotes[pr.peer] = { peer: pr.peer, g: buildAvatar(), x: s.p[0], y: s.p[1], z: s.p[2], yaw: s.p[3], node: 0, nodeT: 0, hs: 0, qs: 0, dn: false, name: null }; if (NET.mode === 'host') banner(cleanName(s.n) + ' joined', Object.keys(NET.remotes).length + 1 + ' players in the blockhouse', 2.5); }
-    const k = Math.min(1, dt * 12), ox = r.x, oz = r.z; r.x = lerp(r.x, s.p[0], k); r.y = lerp(r.y, s.p[1], k); r.z = lerp(r.z, s.p[2], k); r.yaw = s.p[3]; r.dn = !!s.dn;
-    const sp = Math.hypot(r.x - ox, r.z - oz) / Math.max(dt, .001), pt = r.g.userData.parts; r.ph = (r.ph || 0) + dt * (2 + sp * 1.8); const sw = sp > .2 && !r.dn ? Math.sin(r.ph) * .55 : 0; pt.lL.rotation.x = sw; pt.lR.rotation.x = -sw;
-    r.g.position.set(r.x, r.y + (r.dn ? .25 : 0), r.z); r.g.rotation.set(r.dn ? -1.5 : 0, r.yaw + Math.PI, 0);
-    { const nm = cleanName(s.n); if (nm !== r.name) { r.name = nm; nameTag(r, nm); } }
+    if (!r) { r = NET.remotes[pr.peer] = { peer: pr.peer, g: buildAvatar(), x: s.p[0], y: s.p[1], z: s.p[2], yaw: s.p[3], node: 0, nodeT: 0, hs: 0, qs: 0, dn: 0, name: null, buf: [], pitch: 0, rv0: s.rv ? s.rv[0] : 0, shots: s.a ? s.a[0] : undefined }; if (NET.mode === 'host') banner(cleanName(s.n) + ' joined', Object.keys(NET.remotes).length + 1 + ' players in the blockhouse', 2.5); }
+    const p = s.p, B = r.buf, L = B[B.length - 1], ox = r.x, oz = r.z;
+    if (!L || p[0] !== L.p[0] || p[1] !== L.p[1] || p[2] !== L.p[2] || p[3] !== L.p[3] || (p[4] || 0) !== (L.p[4] || 0) || T1 - L.t > .2) { B.push({ t: T1, p }); if (B.length > 8) B.shift(); }
+    { let a = B[0], b = B[B.length - 1]; const rt = T1 - SNAP_DELAY;
+      for (let q = B.length - 1; q > 0; q--) if (B[q - 1].t <= rt) { a = B[q - 1]; b = B[q]; break; }
+      if (a === b && B.length > 1) a = B[B.length - 2];
+      const span = Math.max(.001, b.t - a.t), far = Math.hypot(b.p[0] - a.p[0], b.p[2] - a.p[2]) > 6 || Math.abs(b.p[1] - a.p[1]) > 4;   // a teleport or respawn: jump, do not slide
+      const f = a === b || far ? 1 : Math.max(0, Math.min(1 + Math.min(.12, span) / span, (rt - a.t) / span));                     // past the newest known position, carry on a moment in the same direction
+      const dy = ((b.p[3] - a.p[3] + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+      r.x = a.p[0] + (b.p[0] - a.p[0]) * f; r.y = a.p[1] + (b.p[1] - a.p[1]) * f; r.z = a.p[2] + (b.p[2] - a.p[2]) * f; r.yaw = a.p[3] + dy * Math.min(1, f); r.pitch = (a.p[4] || 0) + ((b.p[4] || 0) - (a.p[4] || 0)) * Math.min(1, f); }
+    const was = r.dn; r.dn = s.dn | 0;
+    const sp = Math.hypot(r.x - ox, r.z - oz) / Math.max(dt, .001), pt = r.g.userData.parts; r.ph = (r.ph || 0) + dt * (2 + sp * 1.8); const sw = sp > .2 && !r.dn ? Math.sin(r.ph) * Math.min(.7, .25 + sp * .08) : 0; pt.lL.rotation.x = sw; pt.lR.rotation.x = -sw;
+    r.g.visible = r.dn !== 2; r.g.position.set(r.x, r.y + (r.dn ? .25 : 0), r.z); r.g.rotation.set(r.dn ? -1.5 : 0, r.yaw + Math.PI, 0);
+    { const A = s.a || [0, '', 0]; if (A[0] !== r.shots) { if (r.shots !== undefined && A[0] > r.shots && !r.dn) { r.flashT = .07; pt.flash.rotation.z = rand() * 6.28; const d = WEAPONS[A[1]], vol = Math.max(0, 1 - Math.hypot(r.x - P.x, r.z - P.z, r.y - P.y) / 45) * .55; if (d && vol > .02) { sNoise(d.snd[0], d.snd[1], .9 * vol); sTone(170, 45, d.snd[0] * .8, .7 * vol); } } r.shots = A[0]; }
+      r.flashT = Math.max(0, (r.flashT || 0) - dt); pt.flash.visible = r.flashT > 0;
+      pt.up.rotation.x = r.dn ? .5 : -r.pitch * .85 + (A[2] ? .55 : 0) - (r.flashT > 0 ? .05 : 0); pt.head.rotation.x = r.dn ? 0 : -r.pitch * .6; }
+    if (s.rg === NET.me) helper = r.name || 'A squadmate';
+    if (s.rv && s.rv[1] === NET.me && s.rv[0] !== r.rv0) { r.rv0 = s.rv[0]; if (P.down && !P.out) NET.getUp(); }
+    { const nm = cleanName(s.n); if (nm !== r.name || was !== r.dn) { r.name = nm; nameTag(r, nm, r.dn === 1); } }
     if (each) each(pr, s, r);
   }
   for (const k in NET.remotes) if (!seen[k]) { scene.remove(NET.remotes[k].g); delete NET.remotes[k]; }
+  NET.helper = helper;
   return host;
 }
 const cleanName = n => String(n || '').replace(/[^\w \-]/g, '').trim().slice(0, 14) || 'Soldat';
-function nameTag(r, name) {   // the callsign floating over a squadmate, so you can tell who is who in the dark
+function nameTag(r, name, down) {   // the callsign floating over a squadmate, so you can tell who is who in the dark
   if (r.tag) { r.g.remove(r.tag); r.tag.material.dispose(); r.tagTex.dispose(); }
   const c = document.createElement('canvas'); c.width = 256; c.height = 64; const x = c.getContext('2d');
-  x.font = '700 34px system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 6; x.strokeStyle = 'rgba(0,0,0,.85)'; x.strokeText(name, 128, 34); x.fillStyle = '#f3f1e8'; x.fillText(name, 128, 34);
-  const tex = new T.CanvasTexture(c), sp = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: .9 })); sp.scale.set(1.2, .3, 1); sp.position.set(0, 2.14, 0); r.g.add(sp); r.tag = sp; r.tagTex = tex;
+  x.font = '700 34px system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 6; x.strokeStyle = 'rgba(0,0,0,.85)'; if (down) name = '✚ ' + name; x.strokeText(name, 128, 34); x.fillStyle = down ? '#ff5a4a' : '#f3f1e8'; x.fillText(name, 128, 34);
+  const tex = new T.CanvasTexture(c), sp = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: .9 })); sp.scale.set(1.2, .3, 1); if (down) sp.position.set(0, .95, .85); else sp.position.set(0, 2.14, 0); r.g.add(sp); r.tag = sp; r.tagTex = tex;   // a downed body lies along the floor, so its tag is placed to float above it
 }
 NET.self = { peer: null, get x() { return P.x; }, get y() { return P.y; }, get z() { return P.z; }, get node() { return playerNode; } };
 NET.target = z => {   // each zombie hunts the nearest player who is still standing
@@ -1664,9 +1687,17 @@ NET.report = (z, dmg, head, kind) => {   // a joined player's hit: show it at on
 };
 NET.died = () => {
   if (!NET.mode) return gameOver();
-  P.down = true; P.hp = 0; mouse.down = false; banner('You are down', 'You are back on your feet when the next round starts.', 5);
+  P.down = true; P.out = false; P.hp = 0; P.bleed = REVIVE.bleed; P.vx = P.vz = 0; mouse.down = false;
+  banner('You are down', 'A squadmate can pick you up. You bleed out in ' + REVIVE.bleed + ' seconds.', 5);
 };
-NET.revive = () => { P.down = false; P.hp = CFG.player.hp; P.lastHit = time; P.x = 7 + rand() * 2; P.y = 0; P.z = 9.5; P.vy = 0; banner('Back on your feet', '', 2.5); };
+NET.getUp = () => { P.down = false; P.out = false; P.hp = Math.round(CFG.player.hp * .6); P.lastHit = time; P.safeT = 2.5; SFX.power(); banner('Back on your feet', '', 2.5); };   // picked up by a squadmate, where you fell
+NET.revive = () => { P.down = false; P.out = false; P.hp = CFG.player.hp; P.lastHit = time; P.x = 7 + rand() * 2; P.y = 0; P.z = 9.5; P.vy = 0; banner('Back on your feet', '', 2.5); };   // a new round brings everyone back
+NET.tick = dt => {
+  if (P.safeT > 0) P.safeT -= dt;
+  if (!P.down) return;
+  if (!P.out && !NET.helper) { P.bleed -= dt; if (P.bleed <= 0) { P.out = true; banner('You bled out', 'You are back on your feet when the next round starts.', 5); } }   // the clock stops while someone is picking you up
+  P.camY = P.y; camera.position.set(P.x, P.y + .42, P.z); camera.rotation.set(Math.max(-.6, Math.min(1.2, P.pitch)), P.yaw, .3); gunRoot.position.set(.2, -.7, -.42);   // on the floor, looking up
+};
 function applyPowerup(type) {
   SFX.power(); banner(POWERUPS[type].label, '', 1.8);
   if (type === 'ammo') { P.weapons.forEach(w => { w.mag = WEAPONS[w.id].mag; w.res = WEAPONS[w.id].res; }); P.gren = 4; }
@@ -1687,11 +1718,11 @@ NET.host = dt => {
     applyMono(s.w);
   });
   if (P.down && !Object.keys(NET.remotes).some(k => !NET.remotes[k].dn)) return gameOver();   // everyone is down
-  NET.sendT -= dt; if (NET.sendT > 0) return; NET.sendT = 1 / 12;
+  NET.sendT -= dt; if (NET.sendT > 0) return; NET.sendT = 1 / 15;
   const zs = zombies.filter(z => z.state !== 'dying').map(z => [z.id, Math.round(z.x * 10), Math.round(z.y * 10), Math.round(z.z * 10), Math.round(z.yaw * 10), (z.type === 'echo' ? 1 : 0) | (z.wind > 0 ? 2 : 0) | (z.state === 'tear' ? 4 : 0) | (z.inside ? 0 : 8)].join(',')).join(';');
   const W = Object.assign(monoNow(), { r: G.round, n: G.night ? 1 : 0, pp: PARTS.map(p => p.spots.indexOf(p.pos)), b: WINDOWS.map(w => w.boards).join(''), cs: crate.spot, i: Math.max(0, Math.ceil(G.insta)), d: Math.max(0, Math.ceil(G.dbl)),
     pu: powerups.map(p => [p.id, p.type, Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, Math.round(p.z * 10) / 10]), mk: medkits.map(m => [m.id, Math.round(m.x * 10) / 10, Math.round(m.y * 10) / 10, Math.round(m.z * 10) / 10]) });
-  NET.room.presence({ t: 'h', p: myPos(), dn: P.down ? 1 : 0, zs, W, e: NET.earn, d: NET.dmgOut, ev: NET.evs }).catch(() => {});
+  NET.room.presence(Object.assign({ t: 'h', p: myPos(), zs, W, e: NET.earn, d: NET.dmgOut, ev: NET.evs }, myBody())).catch(() => {});
 };
 // ---- a joined player: draws the host's world, plays their own soldier
 function applyHost(s) {
@@ -1732,19 +1763,20 @@ NET.client = dt => {
   if (!host) { NET.lost += dt; if (NET.lost > 5) { NET.stop(); banner('The host has left', '', 4); gameOver(); } }
   else { NET.lost = 0; NET.hostPeer = host.peer; if (host.presence !== NET.lastS) { NET.lastS = host.presence; applyHost(host.presence); } }
   updateReplicas(dt);
-  NET.sendT -= dt; if (NET.sendT > 0) return; NET.sendT = 1 / 15;
-  NET.room.presence({ t: 'c', p: myPos(), dn: P.down ? 1 : 0, h: NET.hits, q: NET.reqs, w: monoNow() }).catch(() => {});
+  NET.sendT -= dt; if (NET.sendT > 0) return; NET.sendT = 1 / 20;
+  NET.room.presence(Object.assign({ t: 'c', p: myPos(), h: NET.hits, q: NET.reqs, w: monoNow() }, myBody())).catch(() => {});
 };
 NET.start = mode => {
-  Object.assign(NET, { mode, remotes: {}, earn: {}, dmgOut: {}, hits: [], reqs: [], evs: [], evSeen: -1, lastEarn: 0, lastDmg: 0, sendT: 0, lost: 0, lastS: null, mkGone: {}, hostPeer: null });
+  Object.assign(NET, { mode, remotes: {}, earn: {}, dmgOut: {}, hits: [], reqs: [], evs: [], evSeen: -1, lastEarn: 0, lastDmg: 0, sendT: 0, lost: 0, lastS: null, mkGone: {}, hostPeer: null, shots: 0, rv: null, helper: null });
+  P.out = false; P.safeT = 0;
   P.down = false; if (mode === 'client') { G.phase = 'remote';   // everyone gets their own place to stand in the Start Room: the host in the middle, the rest in the order they are listed
     const ids = NET.room.peers().filter(p => (p.isMe && p.sameTab) || (p.presence && (p.presence.t === 'c' || p.presence.t === 'L'))).map(p => p.peer).sort(), me = NET.room.peers().find(p => p.isMe && p.sameTab);
     P.x = [6.9, 9.1, 6.3, 7.45, 8.55][Math.max(0, ids.indexOf(me ? me.peer : '')) % 5]; }
 };
 NET.stop = () => {
-  const was = NET.mode; NET.mode = null; for (const k in NET.remotes) scene.remove(NET.remotes[k].g); NET.remotes = {}; P.down = false;
+  const was = NET.mode; NET.mode = null; for (const k in NET.remotes) scene.remove(NET.remotes[k].g); NET.remotes = {}; P.down = false; P.out = false;
   if (NET.room && was) setTimeout(NET.lobby, 0);
-  if (NET.room && was) NET.room.presence({ t: was === 'host' ? 'o' : 'm', p: null, zs: null, W: null, h: null, q: null, w: null, e: null, d: null, ev: null, dn: null }).catch(() => {});
+  if (NET.room && was) NET.room.presence({ t: was === 'host' ? 'o' : 'm', p: null, zs: null, W: null, h: null, q: null, w: null, e: null, d: null, ev: null, dn: null, a: null, rg: null, rv: null }).catch(() => {});
 };
 // ---- the lobby: players gather on the menu, ready up, and the leader starts the match for everyone at once
 NET.lob = null;   // { lead, ready } while this player is in the lobby
@@ -1805,6 +1837,7 @@ function frame(now) {
   if (G.state === 'playing' || (NET.mode && (G.state === 'paused' || G.state === 'dev'))) {   // a co-op game never stops for one player's menu
     time += dt;
     updateWorld(dt); updateMap(dt); if (!P.down) updatePlayer(dt); findPrompt(); interactHeld(dt);
+    if (NET.mode) NET.tick(dt);
     if (NET.mode === 'client') NET.client(dt); else { if (!DBG.freeze) { updateRound(dt); updateZombies(dt); } if (NET.mode === 'host') NET.host(dt); }
     devTick(dt); updateGrenades(dt); updatePowerups(dt); updateFx(dt); updateHud(dt);
   } else if (G.state === 'menu') {
