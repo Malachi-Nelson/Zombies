@@ -111,6 +111,7 @@ body{background:var(--concrete);color:var(--bone);font-family:var(--font-body);f
 .roster li span:last-child{color:var(--steel);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
 .roster li.ok span:last-child{color:var(--sodium)}
 .note{font-size:14px !important;color:var(--steel) !important}
+.note a{color:var(--sodium)}
 .maps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
 .map{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--steel);color:var(--bone);text-decoration:none;min-width:0}
 .map b{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:.04em;color:var(--chalk)}
@@ -1787,11 +1788,11 @@ $('co-name').addEventListener('change', () => { try { localStorage.setItem('fh93
 $('co-name').addEventListener('keydown', e => e.stopPropagation());
 (async () => {
   let lobby = null; try { lobby = window.claude && window.claude.use ? await window.claude.use('room') : null; } catch (e) {}
-  if (!lobby) { $('co-status').textContent = 'Co-op is unavailable in this view. Solo still works.'; return; }
+  if (!lobby) { $('co-status').textContent = 'Co-op does not work in this view. Reload the page to try again. Solo works.'; return; }
   let rm = lobby; try { rm = await lobby.join('fliegerhorst-935'); } catch (e) {}
   NET.room = rm; $('co-status').textContent = 'Looking for other players…';
   NET.say();
-  rm.onPeers(() => { if (!NET.mode) NET.lobby(); }, () => { NET.room = null; NET.lob = null; ['co-ready', 'co-start', 'co-leave'].forEach(id => $(id).hidden = true); $('co-host').hidden = $('co-join').hidden = false; $('co-host').disabled = $('co-join').disabled = true; $('co-roster').hidden = true; $('co-status').textContent = 'Co-op is unavailable in this view. Solo still works.'; if (NET.mode) { NET.mode = null; gameOver(); } });
+  rm.onPeers(() => { if (!NET.mode) NET.lobby(); }, () => { NET.room = null; NET.lob = null; ['co-ready', 'co-start', 'co-leave'].forEach(id => $(id).hidden = true); $('co-host').hidden = $('co-join').hidden = false; $('co-host').disabled = $('co-join').disabled = true; $('co-roster').hidden = true; $('co-status').textContent = 'Co-op does not work in this view. Reload the page to try again. Solo works.'; if (NET.mode) { NET.mode = null; gameOver(); } });
   NET.lobby();
 })();
 
