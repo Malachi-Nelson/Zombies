@@ -37,6 +37,8 @@ body{background:var(--concrete);color:var(--bone);font-family:var(--font-body);f
 #h-ammo{font-family:var(--font-data);font-size:clamp(28px,5vw,44px);line-height:1;color:var(--chalk);font-variant-numeric:tabular-nums}
 #h-ammo small{font-size:.5em;color:var(--steel)}
 #h-gren{font-family:var(--font-data);font-size:13px;color:var(--steel);letter-spacing:.2em}
+#h-perks{display:flex;gap:6px;justify-content:flex-end;margin-top:8px;min-height:26px}
+#h-perks i{font-style:normal;font-family:var(--font-display);font-weight:800;font-size:16px;line-height:26px;width:26px;text-align:center;color:#111;border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,.5)}
 #h-prompt{left:50%;bottom:24%;transform:translateX(-50%);font-size:clamp(16px,2.4vw,21px);font-weight:500;letter-spacing:.04em;color:var(--chalk);text-shadow:0 1px 6px #000,0 0 2px #000;white-space:nowrap}
 #h-prompt b{font-family:var(--font-data);font-weight:400;color:var(--sodium)}
 #h-banner{left:50%;top:22%;transform:translateX(-50%);text-align:center;opacity:0;transition:opacity .5s;width:min(90%,640px)}
@@ -141,6 +143,7 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
       <div id="h-weapon"></div>
       <div id="h-ammo"></div>
       <div id="h-gren"></div>
+      <div id="h-perks"></div>
       <div id="h-cond"></div>
     </div>
   </div>
@@ -199,7 +202,7 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
    in the way, and nobody "holds the room open": anyone can come and go.
    The plain page is one public room. A link with a #code is a private room for whoever has that link. */
 (() => {
-  const BUILD = 'build 12 Nov E';
+  const BUILD = 'build 12 Nov F';
   const SERVERS = window.MQ_SERVERS || ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'];
   const STALE = 7000;   // a player the relay has not heard from for this long has gone
   const hash = (location.hash || '').replace(/^#/, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
@@ -779,6 +782,49 @@ stencil('LAGER', WHITE, 15.79, 2.65, 11.8, -1, 0, 1.3, .34);
 stencil('ZUM FLUGFELD', WHITE, 7.5, 2.55, .012, 0, 1, 2.4, .42);
 stencil('TREPPE', WHITE, 13.99, 2.4, 5.2, -1, 0, 1.3, .34);
 stencil('RAUCHEN VERBOTEN', YELLOW, 18.3, 2.5, 12.988, 0, -1, 2.4, .4);
+// ---- Period insignia and wall dressing for a Luftwaffe field in January 1945. Shown as the historical record of the place, not as decoration for the squad.
+const EMBLEMS = true;   // false leaves the party emblem off the banners, flag, posters and aircraft fin (the discs stay empty)
+function hooked(g, cx, cy, s) { const t = s * .2; g.save(); g.translate(cx, cy); g.rotate(Math.PI / 4); g.fillStyle = '#131314'; g.fillRect(-s / 2, -t / 2, s, t); g.fillRect(-t / 2, -s / 2, t, s); g.fillRect(-t / 2, -s / 2, s / 2 + t / 2, t); g.fillRect(s / 2 - t, -t / 2, t, s / 2 + t / 2); g.fillRect(-s / 2, s / 2 - t, s / 2 + t / 2, t); g.fillRect(-s / 2, -s / 2, t, s / 2 + t / 2); g.restore(); }
+function wear(g, w, h, n) { g.globalCompositeOperation = 'destination-out'; for (let i = 0; i < n; i++) { g.globalAlpha = rand() * .5; g.fillRect(rand() * w, rand() * h, 1 + rand() * 7, 1 + rand() * 3); } g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; }
+function partyField(g, w, h, cy) { g.fillStyle = '#9a161a'; g.fillRect(0, 0, w, h); const r = Math.min(w, h) * .4; g.fillStyle = '#e9e5d8'; g.beginPath(); g.arc(w / 2, cy, r, 0, 7); g.fill(); if (EMBLEMS) hooked(g, w / 2, cy, r * 1.22); g.fillStyle = 'rgba(0,0,0,.18)'; for (let i = 0; i < 5; i++) g.fillRect(w * (.12 + i * .19), 0, w * .03, h); }
+const hangBanner = (x, y, z, nx, nz, pw, ph) => paintSign((g, w, h) => { partyField(g, w, h, h * .36); wear(g, w, h, 160); }, 128, 384, x, y, z, nx, nz, pw, ph);   // long party banner, as hung on official buildings
+function balkenkreuz(x, y, z, nx, nz, size) { paintSign((g, w, h) => { const c = w / 2, a = w * .46, tw = w * .3, tb = w * .17; g.fillStyle = '#e8e6dc'; g.fillRect(c - a, c - tw / 2, a * 2, tw); g.fillRect(c - tw / 2, c - a, tw, a * 2); g.fillStyle = '#141516'; g.fillRect(c - a, c - tb / 2, a * 2, tb); g.fillRect(c - tb / 2, c - a, tb, a * 2); wear(g, w, h, 120); }, 128, 128, x, y, z, nx, nz, size, size); }   // the national marking carried on every Luftwaffe aircraft
+function poster(lines, o, x, y, z, nx, nz) {
+  paintSign((g, w, h) => {
+    g.fillStyle = o.bg || '#d6ccb0'; g.fillRect(0, 0, w, h); let top = h * .08;
+    if (o.band) { g.fillStyle = o.band; g.fillRect(0, 0, w, h * .3); top = h * .36; if (o.disc) { g.fillStyle = '#e9e5d8'; g.beginPath(); g.arc(w / 2, h * .15, h * .11, 0, 7); g.fill(); if (EMBLEMS) hooked(g, w / 2, h * .15, h * .135); } }
+    g.fillStyle = o.ink || '#17181b'; g.textAlign = 'center'; g.textBaseline = 'middle'; const step = (h * .94 - top) / lines.length;
+    lines.forEach((t, i) => { let size = Math.min(step * .8, h * .2); const f = n => `800 ${n}px "Big Shoulders Stencil Display", Impact, "Arial Narrow", sans-serif`; g.font = f(size); const tw = g.measureText(t).width; if (tw > w * .86) { size *= w * .86 / tw; g.font = f(size); } g.fillText(t, w / 2, top + step * (i + .5)); });
+    g.strokeStyle = o.ink || '#17181b'; g.lineWidth = 3; g.strokeRect(6, 6, w - 12, h - 12); wear(g, w, h, 200);
+  }, 256, 366, x, y, z, nx, nz, .7, 1);
+}
+// Start Room: the notices every wartime duty room carried, and the party poster
+poster(['PST!', 'FEIND', 'HÖRT MIT'], { bg: '#cfc39e' }, 13.7, 1.65, .012, 0, 1);
+poster(['EIN VOLK', 'EIN REICH', 'EIN FÜHRER'], { band: '#9a161a', disc: true }, 1.7, 1.65, .012, 0, 1);
+poster(['VERDUNKELN!', 'DER FEIND', 'SIEHT', 'DEIN LICHT'], { bg: '#22262b', ink: '#d9b23a' }, 11.9, 1.65, 12.988, 0, -1);
+poster(['RÄDER', 'MÜSSEN ROLLEN', 'FÜR DEN SIEG'], { bg: '#d6ccb0', band: '#2b3138' }, 3.2, 1.65, 12.988, 0, -1);
+// Flugleitung: party banners on the upper storey either side of the watch-room windows, and the flag on the apron mast
+hangBanner(29.985, 5.25, -19.3, -1, 0, 1.0, 2.7); hangBanner(29.985, 5.25, -10.8, -1, 0, 1.0, 2.7);
+{ const mast = new T.Mesh(new T.CylinderGeometry(.045, .06, 8.5, 8), M.steel); mast.position.set(26.5, 4.25, -11.5); scene.add(mast); addBox(26.4, 26.6, 0, 2.2, -11.6, -11.4, null, { a: false });
+  const flag = paintSign((g, w, h) => { partyField(g, w, h, h / 2); wear(g, w, h, 90); }, 256, 154, 27.5, 7.75, -11.5, 0, 1, 1.9, 1.15); flag.material.side = T.DoubleSide; }
+// Me 323: national markings on both sides of the fuselage
+balkenkreuz(10.5, 2.05, -48.19, 0, 1, 1.7); balkenkreuz(10.5, 2.05, -51.81, 0, -1, 1.7);
+stencil('RF', BLACK, 8.4, 2.05, -48.19, 0, 1, 1.5, .8); stencil('XM', BLACK, 12.7, 2.05, -48.19, 0, 1, 1.5, .8); stencil('XM', BLACK, 8.4, 2.05, -51.81, 0, -1, 1.5, .8); stencil('RF', BLACK, 12.7, 2.05, -51.81, 0, -1, 1.5, .8);
+// ---- Field canteen cabinets ("perks"): four machines that only work once the main power is on. Bought with points, lost when you go down.
+const PERKS = [
+  { id: 'hp',     name: 'Eisenherz',    sign: 'EISENHERZ',    what: 'health 250',           cost: 2500, col: 0xb3261e, x: 29.5, z: -20,  nx: -1, nz: 0 },
+  { id: 'reload', name: 'Schnelllader', sign: 'SCHNELLLADER', what: 'reload twice as fast', cost: 3000, col: 0x3f9b54, x: -23,  z: -13,  nx: 0,  nz: 1 },
+  { id: 'rof',    name: 'Doppelschlag', sign: 'DOPPELSCHLAG', what: 'fire a third faster',  cost: 2000, col: 0xd9b23a, x: -30,  z: -37,  nx: 0,  nz: 1 },
+  { id: 'medic',  name: 'Sanitäter',    sign: 'SANITÄTER',    what: 'revive in half the time', cost: 1500, col: 0x4f8fd0, x: 41.5, z: 17, nx: -1, nz: 0 },
+];
+PERKS.forEach(k => { const hw = k.nz ? .45 : .33, hd = k.nz ? .33 : .45;
+  addBox(k.x - hw, k.x + hw, 0, 1.95, k.z - hd, k.z + hd, M.steel, { a: false });
+  k.lamp = new T.Mesh(new T.BoxGeometry(k.nz ? .7 : .06, .3, k.nz ? .06 : .7), new T.MeshBasicMaterial({ color: 0x1c1f22 })); k.lamp.position.set(k.x + k.nx * .34, 1.62, k.z + k.nz * .34); scene.add(k.lamp);
+  stencil(k.sign, WHITE, k.x + k.nx * .345, 1.15, k.z + k.nz * .345, k.nx, k.nz, .8, .2); });
+function applyPerks() {
+  CFG.player.hp = P.perks.hp ? 250 : 100;
+  const el = $('h-perks'); el.textContent = ''; PERKS.forEach(k => { if (!P.perks[k.id]) return; const i = document.createElement('i'); i.textContent = k.name[0]; i.title = k.name; i.style.background = '#' + k.col.toString(16).padStart(6, '0'); el.appendChild(i); });
+}
 stencil('LICHT AUS!', WHITE, 25.988, 2.6, 10.6, -1, 0, 1.6, .38);
 stencil('FEIND HÖRT MIT!', YELLOW, 8.6, UP + 2.6, 12.988, 0, -1, 2.6, .44);
 stencil('FUNKRAUM', WHITE, 8.2, UP + 2.5, 8.888, 0, -1, 1.8, .4);
@@ -934,6 +980,7 @@ const zombies = [], powerups = [], grenades = [], fx = [];
 let playerNode = 0, navT = 0, bannerT = 0, time = 0;
 
 function newGame() {
+  P.perks = {}; applyPerks();
   zombies.forEach(z => scene.remove(z.g)); zombies.length = 0;
   powerups.forEach(p => scene.remove(p.m)); powerups.length = 0;
   grenades.forEach(g => scene.remove(g.m)); grenades.length = 0; clearMedkits();
@@ -1139,7 +1186,7 @@ function giveWeapon(id) {
   P.reloadT = 0; P.switchT = .45; setGun();
 }
 function swapWeapon(i) { if (P.weapons.length < 2) return; if (i === undefined) i = 1 - P.cur; if (i === P.cur || i >= P.weapons.length) return; P.cur = i; P.reloadT = 0; P.switchT = .45; setGun(); }
-function startReload() { const w = P.weapons[P.cur], d = WEAPONS[w.id]; if (P.reloadT > 0 || w.mag >= d.mag || w.res <= 0) return; P.reloadT = d.reload; SFX.reload(); }
+function startReload() { const w = P.weapons[P.cur], d = WEAPONS[w.id]; if (P.reloadT > 0 || w.mag >= d.mag || w.res <= 0) return; P.reloadT = d.reload * (P.perks.reload ? .5 : 1); SFX.reload(); }
 function aimBasis() {
   const cy = Math.cos(P.yaw), sy = Math.sin(P.yaw), cp = Math.cos(P.pitch), sp = Math.sin(P.pitch);
   const f = [-sy * cp, sp, -cy * cp], r = [cy, 0, -sy], u = [-r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1]];
@@ -1149,7 +1196,7 @@ function tryFire() {
   const w = P.weapons[P.cur], d = WEAPONS[w.id];
   if (P.fireT > 0 || P.reloadT > 0 || P.switchT > 0) return;
   if (w.mag <= 0) { if (w.res > 0) startReload(); else { SFX.click(); P.fireT = .25; } return; }
-  if (!DBG.ammo) w.mag--; P.fireT = 60 / d.rpm; P.kick = Math.min(.3, P.kick + d.kick); P.pitch = Math.min(1.5, P.pitch + d.kick * .12);
+  if (!DBG.ammo) w.mag--; P.fireT = 60 / d.rpm / (P.perks.rof ? 1.33 : 1); P.kick = Math.min(.3, P.kick + d.kick); P.pitch = Math.min(1.5, P.pitch + d.kick * .12);
   SFX.shot(d); NET.shots = (NET.shots | 0) + 1; flashT = .05; flashMesh.rotation.z = rand() * 6.28; muzzleLight.position.set(P.x, P.eyeY + P.y, P.z);
   const B = aimBasis(), ox = P.x, oy = P.y + P.eyeY, oz = P.z, moving = Math.hypot(P.vx, P.vz) > 1 ? 1.4 : 1, spr = d.spread * lerp(1, .3, P.ads) * moving;
   for (let k = 0; k < d.pellets; k++) {
@@ -1237,7 +1284,7 @@ function updatePlayer(dt) {
   camera.rotation.set(P.pitch, P.yaw, 0);
   camera.fov = lerp(75, d.zoom, P.ads) + (sprint ? 4 : 0); camera.updateProjectionMatrix();
   // viewmodel
-  const low = P.reloadT > 0 ? Math.sin(Math.min(1, (d.reload - P.reloadT) / d.reload) * Math.PI) * .22 : P.switchT > 0 ? P.switchT * .6 : 0;
+  const low = P.reloadT > 0 ? Math.sin(Math.max(0, Math.min(1, (d.reload - P.reloadT) / d.reload)) * Math.PI) * .22 : P.switchT > 0 ? P.switchT * .6 : 0;
   const kn = P.knifeT > .25 ? (P.knifeT - .25) / .3 : 0;
   gunRoot.position.set(lerp(.2, 0, P.ads) + Math.cos(P.bob * .5) * .008 * (1 - P.ads) - kn * .12, lerp(-.19, -.108, P.ads) - low + Math.abs(Math.sin(P.bob)) * .008 * (1 - P.ads) - (sprint ? .04 : 0), lerp(-.42, -.3, P.ads) + P.kick * .5 - kn * .15);
   gunRoot.rotation.set(P.kick * 1.2 - low * 1.5, (sprint ? .5 : 0) + kn * .6, 0);
@@ -1255,7 +1302,8 @@ let prompt = null;
 function findPrompt() {
   prompt = null;
   if (P.down) return prompt = { text: P.out ? 'You bled out · you are back on your feet next round' : NET.helper ? '<b>' + NET.helper + '</b> is picking you up…' : 'You are down · a squadmate can revive you · bleeding out in <b>' + Math.ceil(P.bleed) + 's</b>' };
-  if (NET.mode) for (const k in NET.remotes) { const r = NET.remotes[k]; if (r.dn === 1 && near(r.x, r.y, r.z, REVIVE.reach)) return prompt = { text: '<b>Hold F</b> Revive ' + r.name + holdBar(REVIVE.hold), holdDur: REVIVE.hold, reviving: r.peer, holdAct: () => { NET.rv = [++NET.seq, r.peer]; SFX.power(); banner('You picked up ' + r.name, '', 2); } }; }
+  if (NET.mode) for (const k in NET.remotes) { const r = NET.remotes[k]; if (r.dn === 1 && near(r.x, r.y, r.z, REVIVE.reach)) { const hd = REVIVE.hold * (P.perks.medic ? .5 : 1); return prompt = { text: '<b>Hold F</b> Revive ' + r.name + holdBar(hd), holdDur: hd, reviving: r.peer, holdAct: () => { NET.rv = [++NET.seq, r.peer]; SFX.power(); banner('You picked up ' + r.name, '', 2); } }; } }
+  for (const k of PERKS) { k.lamp.material.color.setHex(G.open.mains ? k.col : 0x1c1f22); if (near(k.x + k.nx * .9, 0, k.z + k.nz * .9, 1.3)) return prompt = !G.open.mains ? { text: k.name + ' · needs the main power' } : P.perks[k.id] ? { text: k.name + ' · you already have it' } : { text: `<b>F</b> ${k.name} · ${k.what} <b>[${k.cost}]</b>`, act: () => { if (spend(k.cost)) { P.perks[k.id] = true; applyPerks(); if (k.id === 'hp') P.hp = CFG.player.hp; SFX.power(); banner(k.name, k.what, 2.5); } } }; }
   { const bp = buildablePrompt() || mapPrompt(); if (bp) return prompt = bp; }
   if (!G.open.doorA && near(16, 0, 11.8, 2)) return prompt = { text: `<b>F</b> Open door to Storage <b>[${CFG.cost.doorA}]</b>`, act: () => { if (spend(CFG.cost.doorA)) { G.open.doorA = true; doorA.off = true; doorA.mesh.visible = false; buildNav(); } } };
   if (!G.open.debris && near(15, P.y, 3.4, 1.9) && Math.abs(P.x - 15) < 1) return prompt = { text: `<b>F</b> Clear stair debris <b>[${CFG.cost.debris}]</b>`, act: () => { if (spend(CFG.cost.debris)) { G.open.debris = true; debris.off = true; debrisGroup.visible = false; buildNav(); } } };
@@ -1599,9 +1647,9 @@ function applyMono(w) {
   PADS.forEach((p, i) => { if ((w.pl >> i & 1) && !p.linked) { p.linked = true; ch = true; } });
   if (ch) syncOpenVisuals();
 }
-// Other players: the squad. Black greatcoat, steel helmet, gas mask with a filter canister, rifle at the ready. The unit mark is the fictional "935".
+// Other players: the squad. Black greatcoat under steel trench armour, steel helmet with brow plate, gas mask with a filter canister, rifle at the ready. The unit mark is the fictional "935".
 const AV = { coat: new T.MeshLambertMaterial({ color: 0x1b1e21 }), leather: new T.MeshLambertMaterial({ color: 0x0c0d0e }), steel: new T.MeshLambertMaterial({ color: 0x262b2e }), rubber: new T.MeshLambertMaterial({ color: 0x141617 }),
-  lens: new T.MeshBasicMaterial({ color: 0x7fc4b4 }), web: new T.MeshLambertMaterial({ color: 0x3a3326 }), can: new T.MeshLambertMaterial({ color: 0x3d463a }), band: new T.MeshLambertMaterial({ color: 0x9a9d98 }), wood: new T.MeshLambertMaterial({ color: 0x4a3220 }), flash: new T.MeshBasicMaterial({ color: 0xffd98a }) };
+  lens: new T.MeshBasicMaterial({ color: 0x7fc4b4 }), web: new T.MeshLambertMaterial({ color: 0x3a3326 }), can: new T.MeshLambertMaterial({ color: 0x3d463a }), band: new T.MeshLambertMaterial({ color: 0x9a9d98 }), wood: new T.MeshLambertMaterial({ color: 0x4a3220 }), flash: new T.MeshBasicMaterial({ color: 0xffd98a }), plate: new T.MeshLambertMaterial({ color: 0x3a4146 }) };
 function buildAvatar() {
   const g = new T.Group(), parts = {};
   const add = (par, geo, mat, x, y, z) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); par.add(m); return m; };
@@ -1616,7 +1664,11 @@ function buildAvatar() {
   const up = new T.Group(); up.position.set(0, 1.42, 0); g.add(up); parts.up = up;   // arms and rifle swing together as the player aims up and down
   [-1, 1].forEach(sd => { const sh = new T.Group(); sh.position.set(sd * .31, 0, 0); sh.rotation.order = 'YXZ'; sh.rotation.x = sd < 0 ? -1.25 : -1.0; sh.rotation.y = sd * -.42; add(sh, box(.13, .34, .14), AV.coat, 0, -.17, 0); add(sh, box(.12, .3, .13), AV.coat, 0, -.45, 0); add(sh, box(.1, .1, .11), AV.leather, 0, -.63, 0); if (sd < 0) add(sh, box(.14, .08, .15), AV.band, 0, -.12, 0); up.add(sh); });   // arms, gloves, plain unit armband
   { const gun = new T.Group(); gun.position.set(.04, -.25, .4); gun.rotation.y = .16; parts.flash = add(gun, new T.SphereGeometry(.075, 8, 6), AV.flash, 0, .025, .8); parts.flash.visible = false; add(gun, box(.05, .08, .62), AV.wood, 0, 0, 0); add(gun, cyl(.014, .5, 6), AV.steel, 0, .025, .5).rotation.x = Math.PI / 2; add(gun, box(.045, .11, .22), AV.wood, 0, -.04, -.38); up.add(gun); }   // rifle
+  // Steel trench armour of the kind issued to German sentries and assault pioneers: breastplate with three hanging lames, shoulder pieces, and a brow plate on the helmet
+  add(g, box(.47, .33, .05), AV.plate, 0, 1.3, .165); [1.09, .99, .89].forEach((y, i) => add(g, box(.45 - i * .02, .11, .045), AV.plate, 0, y, .185 + i * .012));
+  [-1, 1].forEach(sd => { add(g, box(.17, .05, .22), AV.plate, sd * .3, 1.51, 0).rotation.z = sd * -.25; add(g, box(.05, .03, .05), AV.steel, sd * .2, 1.44, .19); });
   const head = new T.Group(); head.position.set(0, 1.66, 0);
+  add(head, box(.3, .13, .025), AV.plate, 0, .13, .165);
   add(head, box(.22, .25, .24), AV.rubber, 0, 0, 0);                               // mask facepiece
   [-.055, .055].forEach(x => { const l = add(head, cyl(.042, .03, 12), AV.lens, x, .035, .125); l.rotation.x = Math.PI / 2; const rim = add(head, cyl(.05, .02, 12), AV.steel, x, .035, .118); rim.rotation.x = Math.PI / 2; });
   add(head, cyl(.055, .09, 12), AV.can, 0, -.1, .15).rotation.x = Math.PI / 2;      // filter screwed to the snout
@@ -1624,7 +1676,7 @@ function buildAvatar() {
   g.add(head); parts.head = head; g.rotation.order = 'YXZ'; scene.add(g); g.userData.parts = parts; return g;   // turn first, then tip over: a downed soldier falls the way they were facing
 }
 const myPos = () => [Math.round(P.x * 100) / 100, Math.round(P.y * 100) / 100, Math.round(P.z * 100) / 100, Math.round(P.yaw * 100) / 100, Math.round(P.pitch * 100) / 100];
-const REVIVE = { bleed: 40, hold: 3, reach: 2 };   // seconds to bleed out, seconds of holding F to pick someone up, metres
+const REVIVE = { bleed: 30, hold: 3, reach: 2 };   // seconds to bleed out, seconds of holding F to pick someone up, metres
 // shots fired, weapon in hand, reloading; whether down (1) or bled out (2); who this player is picking up right now, and the last pick-up they finished
 const myBody = () => ({ a: [NET.shots | 0, P.weapons[P.cur] ? P.weapons[P.cur].id : '', P.reloadT > 0 ? 1 : 0], dn: P.down ? (P.out ? 2 : 1) : 0, rg: prompt && prompt.reviving && P.holdT > 0 ? prompt.reviving : null, rv: NET.rv || null });
 const SNAP_DELAY = .1;   // other players are drawn this far in the past, so there are always two known positions to glide between
@@ -1687,8 +1739,10 @@ NET.report = (z, dmg, head, kind) => {   // a joined player's hit: show it at on
 };
 NET.died = () => {
   if (!NET.mode) return gameOver();
-  P.down = true; P.out = false; P.hp = 0; P.bleed = REVIVE.bleed; P.vx = P.vz = 0; mouse.down = false;
-  banner('You are down', 'A squadmate can pick you up. You bleed out in ' + REVIVE.bleed + ' seconds.', 5);
+  P.down = true; P.out = false; P.hp = 0; P.bleed = REVIVE.bleed; P.vx = P.vz = 0; mouse.down = false; P.reloadT = 0; P.ads = 0;
+  P.perks = {}; applyPerks();                                                                      // going down costs you your perks
+  { const pi = P.weapons.findIndex(w => w.id === 'p38'); if (pi >= 0) { P.cur = pi; setGun(); P.weapons[pi].mag = WEAPONS.p38.mag; } }   // last stand: pistol out, full magazine
+  banner('You are down', 'Hold them off with your pistol. A squadmate can pick you up. You bleed out in ' + REVIVE.bleed + ' seconds.', 5);
 };
 NET.getUp = () => { P.down = false; P.out = false; P.hp = Math.round(CFG.player.hp * .6); P.lastHit = time; P.safeT = 2.5; SFX.power(); banner('Back on your feet', '', 2.5); };   // picked up by a squadmate, where you fell
 NET.revive = () => { P.down = false; P.out = false; P.hp = CFG.player.hp; P.lastHit = time; P.x = 7 + rand() * 2; P.y = 0; P.z = 9.5; P.vy = 0; banner('Back on your feet', '', 2.5); };   // a new round brings everyone back
@@ -1696,7 +1750,11 @@ NET.tick = dt => {
   if (P.safeT > 0) P.safeT -= dt;
   if (!P.down) return;
   if (!P.out && !NET.helper) { P.bleed -= dt; if (P.bleed <= 0) { P.out = true; banner('You bled out', 'You are back on your feet when the next round starts.', 5); } }   // the clock stops while someone is picking you up
-  P.camY = P.y; camera.position.set(P.x, P.y + .42, P.z); camera.rotation.set(Math.max(-.6, Math.min(1.2, P.pitch)), P.yaw, .3); gunRoot.position.set(.2, -.7, -.42);   // on the floor, looking up
+  P.camY = P.y; P.eyeY = .42; camera.position.set(P.x, P.y + P.eyeY, P.z); camera.rotation.set(Math.max(-.6, Math.min(1.2, P.pitch)), P.yaw, .3);   // on the floor, looking up
+  const w = P.weapons[P.cur], d = WEAPONS[w.id], armed = !P.out && w.id === 'p38';
+  gunRoot.position.set(.2, armed ? -.19 - (P.reloadT > 0 ? .12 : 0) : -.7, -.42); P.fireT -= dt; P.switchT = 0; P.kick = Math.max(0, P.kick - dt * 1.2);
+  if (P.reloadT > 0) { P.reloadT -= dt; if (P.reloadT <= 0) { const n = Math.min(d.mag - w.mag, w.res); w.mag += n; w.res -= n; } }
+  if (armed && mouse.down && mouse.fresh) tryFire(); mouse.fresh = false;
 };
 function applyPowerup(type) {
   SFX.power(); banner(POWERUPS[type].label, '', 1.8);
