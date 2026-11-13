@@ -268,7 +268,7 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
    in the way, and nobody "holds the room open": anyone can come and go.
    The plain page is one public room. A link with a #code is a private room for whoever has that link. */
 (() => {
-  const BUILD = 'build 12 Nov M';
+  const BUILD = 'build 12 Nov N';
   const SERVERS = window.MQ_SERVERS || ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'];
   const STALE = 8000;   // a player nobody has heard from for this long has gone
   const hash = (location.hash || '').replace(/^#/, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
@@ -620,14 +620,80 @@ WALLBUYS.forEach(b => {
 });
 // the 935 crate (random weapon box) in the Radio Room
 const crate = { x: 0, y: UP, z: 0, ix: 0, iz: 0, spot: 0, uses: 0, state: 'idle', t: 0, pick: null };
-const crateGlow = new T.Mesh(new T.BoxGeometry(1, .06, 1), new T.MeshBasicMaterial({ color: 0x9fd8ff })); crateGlow.visible = false; scene.add(crateGlow);
+const crateGlow = new T.Mesh(new T.BoxGeometry(1, .06, 1), new T.MeshBasicMaterial({ color: 0x9fd8ff })); crateGlow.visible = false;   // kept for the state it carries; the crate now shows itself through CR below
 const crateLid = new T.Mesh(new T.BoxGeometry(1, .05, 1), M.steel); scene.add(crateLid);
+// What makes the crate unlike any other box on the base: Group 935 stencils, a sigil that glows, light leaking from under the lid,
+// motes drifting up off it, and a low hum you hear before you see it. Opening it throws the lid up and turns weapons over in the light.
+const CR = { g: new T.Group(), motes: [], arcs: [], show: null, showId: null, hum: null, lidY: 0, flash: 0 };
+scene.add(CR.g);
+function crateSigil(g, w, h, a) {   // Group 935's mark: a ring broken in three places, a bar through it, and the number beneath
+  const cx = w / 2, cy = h * .4, r = h * .26; g.save(); g.globalAlpha = a; g.strokeStyle = '#9fd8ff'; g.lineWidth = h * .055; g.shadowColor = '#9fd8ff'; g.shadowBlur = h * .12;
+  for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(cx, cy, r, k * 2.094 + .25, k * 2.094 + 1.85); g.stroke(); }
+  g.beginPath(); g.moveTo(cx - r * 1.35, cy); g.lineTo(cx + r * 1.35, cy); g.stroke(); g.beginPath(); g.arc(cx, cy, r * .28, 0, 7); g.fillStyle = '#9fd8ff'; g.fill();
+  g.font = `800 ${h * .2}px "Big Shoulders Stencil Display", Impact, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('935', cx, h * .86); g.restore();
+}
+CR.label = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 160; const t = new T.CanvasTexture(c);
+  const draw = glow => { const g = c.getContext('2d'); g.clearRect(0, 0, 512, 160); g.globalAlpha = .9; g.fillStyle = '#e9e6da';
+    g.font = '800 46px "Big Shoulders Stencil Display", Impact, sans-serif'; g.textBaseline = 'middle'; g.fillText('GRUPPE 935', 150, 52); g.font = '700 23px "Big Shoulders Stencil Display", Impact, sans-serif'; g.fillStyle = '#d9b23a'; g.fillText('VERSUCHSGUT · NICHT ÖFFNEN', 150, 104, 340);
+    g.fillStyle = '#e9e6da'; g.font = '600 18px monospace'; g.globalAlpha = .6; g.fillText('KISTE Nr. 7  ·  KAHLENBERG', 150, 138);
+    g.globalAlpha = 1; g.save(); g.translate(10, 10); crateSigil(g, 130, 140, .55 + glow * .45); g.restore();
+    g.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 260; i++) { g.globalAlpha = Math.random() * .55; g.fillRect(Math.random() * 512, Math.random() * 160, 1 + Math.random() * 6, 1 + Math.random() * 3); } g.globalCompositeOperation = 'source-over'; t.needsUpdate = true; };
+  draw(0); if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw(0)).catch(() => {});
+  const mat = new T.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false }); return { mat, draw }; })();
+CR.seamMat = new T.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: .5, blending: T.AdditiveBlending, depthWrite: false });
+CR.moteMat = new T.MeshBasicMaterial({ color: 0xbfe6ff, transparent: true, opacity: .8, blending: T.AdditiveBlending, depthWrite: false });
+CR.light = new T.PointLight(0x8fd0ff, .6, 5.5, 2); CR.g.add(CR.light);
+CR.arcMat = new T.LineBasicMaterial({ color: 0xcfeeff, transparent: true, opacity: .9 });
+for (let i = 0; i < 4; i++) { const l = new T.Line(new T.BufferGeometry().setFromPoints(Array.from({ length: 7 }, () => new T.Vector3())), CR.arcMat); l.visible = false; l.frustumCulled = false; CR.g.add(l); CR.arcs.push({ l, t: 0 }); }
+for (let i = 0; i < 16; i++) { const m = new T.Mesh(new T.BoxGeometry(.025, .025, .025), CR.moteMat); m.visible = false; CR.g.add(m); CR.motes.push({ m, t: Math.random() * 3 }); }
+function crateDress(sp) {   // re-dress the crate at its spot: labels on the long faces, the glowing seam, bands
+  CR.show = null; CR.showId = null; while (CR.g.children.length > 1 + CR.arcs.length + CR.motes.length) CR.g.remove(CR.g.children[CR.g.children.length - 1]);
+  const W = sp.x1 - sp.x0, D = sp.z1 - sp.z0, cx = (sp.x0 + sp.x1) / 2, cz = (sp.z0 + sp.z1) / 2; CR.g.position.set(cx, sp.y, cz); CR.W = W; CR.D = D;
+  const long = W >= D, lw = Math.min(long ? W : D, 1.9) * .82;
+  [-1, 1].forEach(sd => { const pl = new T.Mesh(new T.PlaneGeometry(lw, lw * .3125), CR.label.mat); if (long) { pl.position.set(0, .38, sd * (D / 2 + .004)); pl.rotation.y = sd > 0 ? 0 : Math.PI; } else { pl.position.set(sd * (W / 2 + .004), .38, 0); pl.rotation.y = sd > 0 ? Math.PI / 2 : -Math.PI / 2; } CR.g.add(pl); });
+  const seam = new T.Mesh(new T.BoxGeometry(W + .012, .035, D + .012), CR.seamMat); seam.position.y = .69; CR.g.add(seam); CR.seam = seam;
+  [-.36, .36].forEach(f => { const b = new T.Mesh(new T.BoxGeometry(long ? .06 : W + .02, .72, long ? D + .02 : .06), M.steel); b.position.set(long ? f * W : 0, .355, long ? 0 : f * D); CR.g.add(b); });
+  CR.light.position.set(0, 1.0, 0);
+}
+function crateWeapon(id) {   // the weapon turning over in the light above the open crate
+  if (CR.showId === id) return; if (CR.show) { CR.g.remove(CR.show); CR.show = null; } CR.showId = id; if (!id) return;
+  const g = new T.Group(); if (GUNS[id]) gunModel(id, g); else { const b = new T.Mesh(new T.BoxGeometry(.06, .1, .6), VM.glow); g.add(b); }
+  let L = 0; g.traverse(o => { if (o.isMesh) { o.geometry.computeBoundingBox(); L = Math.max(L, -o.position.z + .2); } }); g.position.z = Math.min(.45, L / 2);
+  const holder = new T.Group(); holder.add(g); holder.rotation.y = Math.PI / 2; holder.scale.setScalar(1.35); CR.g.add(holder); CR.show = holder;
+}
+function crateTick(dt) {
+  const near_ = Math.hypot(P.x - CR.g.position.x, P.z - CR.g.position.z), st = crate.state, open = st !== 'idle';
+  CR.flash = Math.max(0, CR.flash - dt * 2);
+  const pulse = .5 + .5 * Math.sin(time * 2.2), k = open ? 1 : .35 + pulse * .25;
+  CR.seamMat.opacity = open ? .9 : .25 + pulse * .3; CR.light.intensity = (open ? 2.4 : .45 + pulse * .35) + CR.flash * 3; CR.light.distance = open ? 7 : 5;
+  if (((time * 4) | 0) !== CR.lt) { CR.lt = (time * 4) | 0; CR.label.draw(open ? 1 : pulse * .6); }   // the sigil breathes
+  // the lid: thrown up and tilted back while open
+  CR.lidY = lerp(CR.lidY, open ? 1 : 0, Math.min(1, dt * (open ? 6 : 2.5)));
+  const bz = Math.sign(crate.z - crate.iz) || 1, bx = Math.sign(crate.x - crate.ix) || 1;   // hinged on the far side from where you stand, so it swings away and the light pours toward you
+  crateLid.position.y = CR.g.position.y + .72 + CR.lidY * .5; crateLid.rotation.set(CR.D <= CR.W ? bz * CR.lidY * 1.2 : 0, 0, CR.D > CR.W ? -bx * CR.lidY * 1.2 : 0);
+  if (CR.D <= CR.W) crateLid.position.z = CR.g.position.z + bz * CR.lidY * CR.D * .55; else crateLid.position.x = CR.g.position.x + bx * CR.lidY * CR.W * .55;
+  // motes drift up off the crate, more of them when it is open
+  for (const mo of CR.motes) { mo.t -= dt; if (mo.t <= 0) { mo.t = open ? .6 + rand() * .6 : 1.6 + rand() * 2.2; mo.m.visible = near_ < 26; mo.m.position.set((rand() - .5) * CR.W * .9, .72, (rand() - .5) * CR.D * .9); mo.vy = .25 + rand() * (open ? .9 : .3); mo.dx = (rand() - .5) * .15; }
+    mo.m.position.y += mo.vy * dt; mo.m.position.x += mo.dx * dt; mo.m.rotation.y += dt * 3; mo.m.scale.setScalar(Math.max(.2, mo.t)); }
+  // small arcs crawl over it now and then; while it is open they jump to the weapon
+  for (const a of CR.arcs) { a.t -= dt; if (a.t <= 0) { a.l.visible = false; if (rand() < dt * (open ? 9 : .5) && near_ < 20) { a.t = .06 + rand() * .07; a.l.visible = true; const p = a.l.geometry.attributes.position, sx = (rand() - .5) * CR.W, sz = (rand() - .5) * CR.D, ey = open ? 1.1 + rand() * .3 : .74, ex = open ? (rand() - .5) * .4 : sx + (rand() - .5) * .5, ez = open ? 0 : sz + (rand() - .5) * .4;
+        for (let i = 0; i < 7; i++) { const f = i / 6; p.setXYZ(i, lerp(sx, ex, f) + (i && i < 6 ? (rand() - .5) * .12 : 0), lerp(.72, ey, f) + (i && i < 6 ? (rand() - .5) * .08 : 0), lerp(sz, ez, f) + (i && i < 6 ? (rand() - .5) * .12 : 0)); } p.needsUpdate = true; if (open && near_ < 8 && rand() < .3) SFX.crackle(); } } }
+  // the weapons, turning over: fast while it rolls, settling and bobbing once it has chosen, sinking back as the time runs out
+  if (st === 'roll') { const id = CRATE_POOL[Math.floor(time * (crate.t > 1 ? 9 : 5)) % CRATE_POOL.length]; if (id !== CR.showId) { crateWeapon(id); SFX.tick(); } CR.show.position.y = .8 + (3 - crate.t) / 3 * .35; CR.show.rotation.y = Math.PI / 2 + Math.sin(time * 3) * .2; }
+  else if (st === 'ready') { crateWeapon(crate.pick); CR.show.position.y = 1.15 - Math.max(0, (3 - crate.t) / 3) * .45 + Math.sin(time * 2.4) * .03; CR.show.rotation.y = Math.PI / 2 + Math.sin(time * 1.2) * .35; }
+  else crateWeapon(null);
+  // the hum, nearer is louder
+  if (AC && CR.hum === null) { try { const o = AC.createOscillator(), o2 = AC.createOscillator(), gn = AC.createGain(), f = AC.createBiquadFilter(); o.type = 'sawtooth'; o.frequency.value = 55; o2.type = 'sine'; o2.frequency.value = 110.6; f.type = 'lowpass'; f.frequency.value = 320; o.connect(f); o2.connect(f); f.connect(gn); gn.gain.value = 0; gn.connect(AC.destination); o.start(); o2.start(); CR.hum = { gn, o2 }; } catch (e) { CR.hum = false; } }
+  if (CR.hum) { const v = (G.state === 'playing' || NET.mode) && G.state !== 'menu' ? Math.max(0, 1 - near_ / (open ? 14 : 8)) * (open ? .12 : .045) : 0; CR.hum.gn.gain.setTargetAtTime(v, AC.currentTime, .2); CR.hum.o2.frequency.setTargetAtTime(open ? 165 + Math.sin(time * 6) * 8 : 110.6, AC.currentTime, .3); }
+}
+
 const CRATE_SPOTS = [{ x0: 23.6, x1: 25.6, z0: 4.1, z1: 5, ix: 24.6, iz: 3.3, y: UP }, { x0: 22, x1: 24, z0: 11.8, z1: 12.7, ix: 23, iz: 11.2, y: UP }, { x0: 40, x1: 42, z0: -7.3, z1: -6.4, ix: 41, iz: -8.2, y: 0, needs: 'flug' }].map(sp => { sp.box = addBox(sp.x0, sp.x1, sp.y, sp.y + .7, sp.z0, sp.z1, M.wood); return sp; });
 function setCrateSpot(i) {
   crate.spot = i; crate.uses = 0; CRATE_SPOTS.forEach((sp, k) => { sp.box.off = k !== i; sp.box.mesh.visible = k === i; });
   const sp = CRATE_SPOTS[i]; crate.x = (sp.x0 + sp.x1) / 2; crate.z = (sp.z0 + sp.z1) / 2; crate.y = sp.y; crate.ix = sp.ix; crate.iz = sp.iz;
   crateGlow.position.set(crate.x, sp.y + .76, crate.z); crateGlow.scale.set(sp.x1 - sp.x0 - .1, 1, sp.z1 - sp.z0 - .1);
   crateLid.position.set(crate.x, sp.y + .72, crate.z); crateLid.scale.set(sp.x1 - sp.x0 - .16, 1, sp.z1 - sp.z0 - .16);
+  crateDress(sp); CR.flash = 1; for (let i = 0; i < 3; i++) burst(crate.x, sp.y + .9, crate.z, 0x9fd8ff, 10, 3);
 }
 function nextCrateSpot() { let i = crate.spot; for (let k = 0; k < CRATE_SPOTS.length; k++) { i = (i + 1) % CRATE_SPOTS.length; if (!CRATE_SPOTS[i].needs || G.open[CRATE_SPOTS[i].needs]) return i; } return crate.spot; }
 function crateDone() { crate.state = 'idle'; crateGlow.visible = false; if (crate.uses >= 4) { setCrateSpot(nextCrateSpot()); banner('The crate has moved', 'It is somewhere else on the base now.', 3); } }
@@ -1045,6 +1111,10 @@ const SFX = {
   hit: head => { if (head) { sNoise(.05, 2600, .5, 'bandpass'); sTone(1000, 320, .07, .3, 'triangle'); } else { sNoise(.07, 750, .6, 'bandpass'); sTone(150, 70, .08, .45); } },   // a round landing: a wet slap, sharper on the skull
   kill: head => { sNoise(.14, 420, .7); sTone(110, 38, .2, .75); if (head) { sNoise(.09, 3000, .5, 'bandpass'); sTone(1300, 260, .12, .3, 'triangle'); } },
   click: () => sTone(1300, 900, .04, .2, 'square'),
+  crateOpen: () => { sNoise(.4, 900, .5, 'bandpass'); sTone(220, 880, .5, .25, 'triangle'); sTone(330, 1320, .6, .18, 'sine', .08); },
+  crateReady: () => { [659, 880, 1175].forEach((f, i) => sTone(f, f * 1.01, .5, .2, 'sine', i * .07)); sNoise(.25, 5000, .2, 'highpass'); },
+  tick: () => sTone(1900, 1500, .03, .06, 'square'),
+  crackle: () => sNoise(.05, 6000, .12, 'highpass'),
   reload: () => { sNoise(.05, 3000, .25, 'highpass'); sNoise(.06, 2500, .3, 'highpass', .35); },
   groan: v => sTone(95 + rand() * 50, 60 + rand() * 20, .5 + rand() * .5, v, 'sawtooth'),
   hurt: () => { sTone(110, 40, .3, .6, 'square'); sNoise(.2, 500, .5); },
@@ -1393,9 +1463,7 @@ const GUNS = {
 const holeTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#1b1e21'; x.fillRect(0, 0, 256, 64); x.globalCompositeOperation = 'destination-out'; for (let r = 0; r < 4; r++) for (let i = 0; i < 16; i++) { x.beginPath(); x.arc(8 + i * 16 + (r % 2) * 8, 8 + r * 16, 4.4, 0, 7); x.fill(); } const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; return t; })();
 VM.holes = new T.MeshPhongMaterial({ map: holeTex, transparent: true, alphaTest: .5, side: T.DoubleSide, specular: 0x30363a, shininess: 20 }); VM.sleeve = new T.MeshLambertMaterial({ color: 0x1c1f22 });
 const VMK = .72;   // metres on the real weapon to units in front of the camera
-function setGun() {
-  if (gun) gunRoot.remove(gun);
-  const id = P.weapons[P.cur].id, d = WEAPONS[id].vm, L = d.len, g = new T.Group(), m = new T.Group(); m.scale.setScalar(VMK); m.position.set(0, .014, -.04); g.add(m);
+function gunModel(id, m) {   // builds weapon `id` at real size into group `m` (muzzle toward -z); returns its sight and hand points
   const put = (geo, mat, f, u, s) => { const o = new T.Mesh(geo, mat); o.position.set(s || 0, u, -f); m.add(o); return o; };
   const q = { st: VM.steel, wd: VM.wood, bk: VM.bake, dk: VM.dark, holes: VM.holes,
     // P: an extruded side profile, `th` thick, edges rounded by `bev`. C: a turned part from f0 to f1 (radius r0 at the rear, r1 at the front). B: a block. S: a ball. L: a drum lying across the gun.
@@ -1408,12 +1476,18 @@ function setGun() {
   q.G = (f0, f1, u0, dep) => { q.B(f1 - f0, .004, .012, (f0 + f1) / 2, u0 - dep, VM.steel); q.B(.004, dep, .012, f1, u0 - dep / 2, VM.steel); q.B(.004, dep * .7, .012, f0, u0 - dep * .35, VM.steel); q.B(.005, dep * .62, .006, (f0 + f1) / 2 - .006, u0 - dep * .36, VM.steel, 0, .3); };   // trigger guard and trigger
   q.RS = (f, u) => { q.B(.006, .009, .0045, f, u, VM.dark, .0052); q.B(.006, .009, .0045, f, u, VM.dark, -.0052); q.B(.006, .004, .015, f, u - .0055, VM.dark); };                                                                             // rear sight: a notch to look through
   q.FS = (f, u, hood) => { q.B(.003, .011, .0026, f, u + .002, VM.dark); if (hood) q.C(.0118, .0118, f - .009, f + .009, u + .002, VM.steel, 0, 1).material = VM.hood; };                                                                           // front sight post, hooded on some
+  return GUNS[id](q);
+}
+function setGun() {
+  if (gun) gunRoot.remove(gun);
+  const id = P.weapons[P.cur].id, d = WEAPONS[id].vm, L = d.len, g = new T.Group(), m = new T.Group(); m.scale.setScalar(VMK); m.position.set(0, .014, -.04); g.add(m);
   let r = null;
-  if (GUNS[id]) r = GUNS[id](q);
+  if (GUNS[id]) r = gunModel(id, m);
   else {   // the Funkenwerfer is the one invented weapon
     const add = (w, h, dp, x, y, z, mat, rx) => { const o = new T.Mesh(new T.BoxGeometry(w, h, dp), mat); o.position.set(x, y, z); if (rx) o.rotation.x = rx; g.add(o); return o; };
     add(.05, .07, L * .55, 0, 0, -L * .275, VM.steel); add(.022, .022, L * .5, 0, .014, -L * .75, VM.glow); add(.04, .11, .05, 0, -.08, -.03, VM.steel, .25); add(.03, d.mag, .05, 0, -.035 - d.mag / 2, -L * .33, VM.steel); add(.045, .085, .32, 0, -.025, .14, VM.steel); add(.075, .07, .1, 0, -.1, -.02, VM.glove, .25);
   }
+  const q = { B: (lf, h, w, f, u, mat, side, rx, rz) => { const o = new T.Mesh(new T.BoxGeometry(w, h, lf), mat); o.position.set(side || 0, u, -f); if (rx) o.rotation.x = rx; if (rz) o.rotation.z = rz; m.add(o); return o; } };
   if (r) {   // hands and sleeves: the firing hand round the grip, the support hand under the forearm or on the magazine
     q.B(.085, .085, .062, r.grip[0], r.grip[1], VM.glove, .004, .3); q.B(.06, .075, .07, r.grip[0] - .05, r.grip[1] - .05, VM.sleeve, .012, -.75); q.B(.26, .08, .085, r.grip[0] - .14, r.grip[1] - .2, VM.sleeve, .03, -1.0);   // cuff and forearm, dropping away below the weapon
     if (r.hand) { q.B(.1, .065, .08, r.hand[0], r.hand[1] - .02, VM.glove, -.006); q.B(.07, .07, .075, r.hand[0] - .02, r.hand[1] - .085, VM.sleeve, -.03, -1.2, .3); }   // support hand cupped under the forearm, cuff below it
@@ -1580,8 +1654,8 @@ function findPrompt() {
     return prompt = { text: `<b>F</b> ${own ? 'Ammo for' : 'Buy'} ${d.name} <b>[${c}]</b>`, act: () => { if (spend(c)) giveWeapon(b.id); } };
   }
   if (near(crate.ix, crate.y, crate.iz, 1.7)) {
-    if (crate.state === 'idle') return prompt = { text: `<b>F</b> Open the 935 crate <b>[${CFG.cost.crate}]</b>`, act: () => { if (spend(CFG.cost.crate)) { crate.state = 'roll'; crate.t = 3; crate.uses++; crateGlow.visible = true; const pool = CRATE_POOL.filter(id => !P.weapons.some(w => w.id === id)); crate.pick = pool[Math.floor(rand() * pool.length)]; } } };
-    if (crate.state === 'roll') return prompt = { text: WEAPONS[CRATE_POOL[Math.floor(time * 12) % CRATE_POOL.length]].name + ' …' };
+    if (crate.state === 'idle') return prompt = { text: `<b>F</b> Open the 935 crate <b>[${CFG.cost.crate}]</b>`, act: () => { if (spend(CFG.cost.crate)) { crate.state = 'roll'; crate.t = 3; crate.uses++; CR.flash = 1; SFX.crateOpen(); crateGlow.visible = true; const pool = CRATE_POOL.filter(id => !P.weapons.some(w => w.id === id)); crate.pick = pool[Math.floor(rand() * pool.length)]; } } };
+    if (crate.state === 'roll') return prompt = { text: 'The crate is choosing…' };
     if (crate.state === 'ready') return prompt = { text: `<b>F</b> Take ${WEAPONS[crate.pick].name}`, act: () => { giveWeapon(crate.pick); SFX.buy(); crateDone(); } };
   }
   if (!G.gen && near(23.3, 0, 11.7, 1.5)) return prompt = { text: '<b>Hold F</b> Start the generator' + holdBar(2.5), holdDur: 2.5, holdAct: () => { G.gen = true; SFX.power(); SFX.boom(); banner('Generator running', 'The lights are back, until the next Night Round.', 4); } };
@@ -1784,7 +1858,7 @@ function updateWorld(dt) {
   devWorldRest(dt);
 }
 function devWorldRest(dt) {
-  if (crate.state === 'roll') { crate.t -= dt; if (crate.t <= 0) { crate.state = 'ready'; crate.t = 9; } } else if (crate.state === 'ready') { crate.t -= dt; if (crate.t <= 0) crateDone(); }
+  if (crate.state === 'roll') { crate.t -= dt; if (crate.t <= 0) { crate.state = 'ready'; crate.t = 9; CR.flash = .8; SFX.crateReady(); } } else if (crate.state === 'ready') { crate.t -= dt; if (crate.t <= 0) crateDone(); }
   navT -= dt; if (navT <= 0) { navT = .2; const n = nearestNode(P.x, P.y, P.z, true); if (n >= 0) playerNode = n; }
 }
 
@@ -2281,7 +2355,7 @@ function frame(now) {
     if (NET.mode) NET.tick(dt);
     if (NET.mode === 'client') NET.client(dt); else { if (!DBG.freeze) { updateRound(dt); updateZombies(dt); } if (NET.mode === 'host') NET.host(dt); }
     if (TOUCH.on && !TOUCH.edit) { const want = G.state !== 'playing'; if ($('touch').hidden !== want) $('touch').hidden = want; }
-  devTick(dt); updateGrenades(dt); updatePowerups(dt); updateFx(dt); updateHud(dt); allyMarkers(dt);
+  devTick(dt); updateGrenades(dt); updatePowerups(dt); updateFx(dt); updateHud(dt); allyMarkers(dt); crateTick(dt);
   } else if (G.state === 'menu') {
     menuYaw += dt * .12; camera.position.set(8, 1.62, 8.5); camera.rotation.set(0, menuYaw, 0); fire.intensity = 1.3 + Math.sin(now / 110) * .3; gunRoot.position.set(.2, -.19, -.42);
   }
