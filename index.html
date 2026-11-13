@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#14181c">
 <title>Fliegerhorst 935 Blockhouse</title>
 <style>html,body{margin:0}[hidden]{display:none!important}</style>
 </head>
@@ -67,6 +70,31 @@ body{background:var(--concrete);color:var(--bone);font-family:var(--font-body);f
 #h-cond.danger{color:var(--blood)}
 #hud.night #shade{background:radial-gradient(ellipse at center,rgba(0,0,0,0) 30%,rgba(0,0,0,.8) 100%)}
 #hud.night #grain{opacity:.12}
+#touch{position:absolute;inset:0;touch-action:none;-webkit-touch-callout:none;z-index:5}
+#touch button{position:absolute;touch-action:none;border-radius:50%;border:2px solid rgba(243,241,232,.35);background:rgba(20,24,28,.38);color:var(--chalk);font-family:var(--font-data);font-size:12px;letter-spacing:.06em;width:58px;height:58px;padding:0;-webkit-tap-highlight-color:transparent}
+#touch button.on{background:rgba(228,164,55,.42);border-color:var(--sodium)}
+#t-look{position:absolute;top:0;bottom:0;right:0;width:58%;touch-action:none}
+#t-stick{position:absolute;left:0;top:0;bottom:0;width:42%;touch-action:none}
+#t-stick i{position:absolute;width:118px;height:118px;margin:-59px 0 0 -59px;border-radius:50%;border:2px solid rgba(243,241,232,.25);background:rgba(20,24,28,.22);display:none}
+#t-stick i::after{content:"";position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:rgba(243,241,232,.45);transform:translate(var(--kx,0px),var(--ky,0px))}
+#t-stick.held i{display:block}
+#t-fire{right:calc(max(16px,env(safe-area-inset-right,0px)) + 76px);bottom:96px;width:86px !important;height:86px !important;font-size:15px !important;border-color:rgba(189,42,32,.8) !important}
+#t-ads{right:calc(max(16px,env(safe-area-inset-right,0px)) + 2px);bottom:160px}
+#t-jump{right:calc(max(16px,env(safe-area-inset-right,0px)) + 2px);bottom:92px}
+#t-use{right:calc(max(16px,env(safe-area-inset-right,0px)) + 176px);bottom:120px;border-color:rgba(228,164,55,.7) !important}
+#t-reload{right:calc(max(16px,env(safe-area-inset-right,0px)) + 2px);bottom:228px}
+#t-swap{right:calc(max(16px,env(safe-area-inset-right,0px)) + 70px);bottom:200px}
+#t-nade{right:calc(max(16px,env(safe-area-inset-right,0px)) + 166px);bottom:196px;width:48px !important;height:48px !important;font-size:11px !important}
+#t-knife{right:calc(max(16px,env(safe-area-inset-right,0px)) + 196px);bottom:46px;width:48px !important;height:48px !important;font-size:11px !important}
+#t-pause{top:12px;right:calc(max(16px,env(safe-area-inset-right,0px)) + 2px);width:44px !important;height:44px !important;border-radius:8px !important}
+#t-rotate{display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;padding:24px;background:rgba(20,24,28,.92);color:var(--chalk);font-family:var(--font-display);font-size:28px;letter-spacing:.04em}
+@media (orientation:portrait){#t-rotate{display:flex}}
+body.touch #h-right{right:auto;left:50%;bottom:8px;transform:translateX(-50%);flex-direction:row;align-items:baseline;gap:10px;white-space:nowrap}
+body.touch #h-points{font-size:22px !important}body.touch #h-weapon{font-size:12px !important}body.touch #h-ammo{font-size:22px !important}body.touch #h-gren{display:none}body.touch #h-perks{margin-top:0;min-height:0}body.touch #h-gain{display:none}
+body.touch #h-round{font-size:clamp(40px,8vw,64px);bottom:auto;top:28px}
+body.touch #h-zone{font-size:10px;max-width:60%}
+body.touch #h-prompt{bottom:auto;top:30%;font-size:15px;white-space:normal;text-align:center;max-width:70%}
+body.touch #o-note{display:none}
 #h-dev{top:16px;right:max(16px,env(safe-area-inset-right,0px));text-align:right;font-family:var(--font-data);font-size:12px;line-height:1.5;color:var(--sodium);white-space:pre;text-shadow:0 0 3px #000}
 #dev{position:absolute;top:12px;left:max(16px,env(safe-area-inset-left,0px));width:min(360px,calc(100% - 32px));max-height:calc(100% - 24px);overflow-y:auto;background:rgba(29,35,41,.97);border:1px solid var(--sodium);padding:14px;display:flex;flex-direction:column;gap:10px;font-family:var(--font-data);font-size:13px;color:var(--bone);z-index:5;-webkit-user-select:auto;user-select:auto}
 #dev .dev-h{display:flex;justify-content:space-between;align-items:baseline;color:var(--sodium);letter-spacing:.16em;font-size:14px}
@@ -171,6 +199,20 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
     <div class="row"><label for="dv-scale">Game speed</label><input type="range" id="dv-scale" min="0.25" max="3" step="0.25" value="1"><span id="dv-scalev">1x</span></div>
     <button type="button" id="dv-close">Resume</button>
   </div>
+  <div id="touch" hidden aria-hidden="true">
+    <div id="t-stick"><i></i></div>
+    <div id="t-look"></div>
+    <button id="t-fire" type="button">FIRE</button>
+    <button id="t-ads" type="button">AIM</button>
+    <button id="t-use" type="button">USE</button>
+    <button id="t-jump" type="button">JUMP</button>
+    <button id="t-reload" type="button">RLD</button>
+    <button id="t-swap" type="button">SWAP</button>
+    <button id="t-nade" type="button">NADE</button>
+    <button id="t-knife" type="button">KNIFE</button>
+    <button id="t-pause" type="button" aria-label="Pause">II</button>
+    <div id="t-rotate">Turn your phone sideways to play</div>
+  </div>
   <div id="overlay">
     <div class="card">
       <div class="eyebrow" id="o-eyebrow">Luftwaffe auxiliary airstrip · January 1945</div>
@@ -206,7 +248,7 @@ a.map:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
    in the way, and nobody "holds the room open": anyone can come and go.
    The plain page is one public room. A link with a #code is a private room for whoever has that link. */
 (() => {
-  const BUILD = 'build 12 Nov K';
+  const BUILD = 'build 12 Nov L';
   const SERVERS = window.MQ_SERVERS || ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081'];
   const STALE = 7000;   // a player the relay has not heard from for this long has gone
   const hash = (location.hash || '').replace(/^#/, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
@@ -1449,12 +1491,12 @@ function hurtPlayer(d) {
   if (P.hp <= 0) NET.died();
 }
 function updatePlayer(dt) {
-  const B = aimBasis(), fwd = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0), str = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
-  const sprint = (keys.ShiftLeft || keys.ShiftRight) && fwd > 0 && !mouse.right && P.reloadT <= 0 && !P.winded;
+  const B = aimBasis(), fwd = clamp((keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0) + TOUCH.fy, -1, 1), str = clamp((keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + TOUCH.sx, -1, 1);
+  const sprint = (keys.ShiftLeft || keys.ShiftRight || TOUCH.sprint) && fwd > 0 && !mouse.right && P.reloadT <= 0 && !P.winded;
   if (sprint) { P.stam -= dt / 6; if (P.stam <= 0) { P.winded = true; SFX.pant(); } } else { P.stam = Math.min(1, P.stam + dt / 2.5); if (P.winded && P.stam > .4) P.winded = false; }
   let wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str; const wl = Math.hypot(wx, wz);
   const sp = (sprint ? CFG.player.sprint : CFG.player.walk) * lerp(1, .6, P.ads) * (G.night ? ROUNDS.nightPlayerSpeed : 1);
-  if (wl > 0) { wx = wx / wl * sp; wz = wz / wl * sp; }
+  if (wl > 0) { const mag = Math.min(1, Math.max(Math.hypot(fwd, str), TOUCH.on ? 0 : 1)); wx = wx / wl * sp * mag; wz = wz / wl * sp * mag; }   // a half-pushed stick walks slower
   const acc = Math.min(1, dt * 12); P.vx = lerp(P.vx, wx, acc); P.vz = lerp(P.vz, wz, acc);
   if (keys.Space && P.onGround) { P.vy = CFG.player.jump; P.onGround = false; }
   if (keys.ArrowLeft) P.yaw += dt * 2.2; if (keys.ArrowRight) P.yaw -= dt * 2.2;
@@ -1693,7 +1735,7 @@ function updateHud(dt) {
   if (hudCache.night !== G.night) { hudCache.night = G.night; $('hud').classList.toggle('night', G.night); }
   { const c = !G.night ? '' : P.hp > 66 ? 'fine' : P.hp > 33 ? 'caution' : 'danger'; if (hudCache.cond !== c) { hudCache.cond = c; const e = $('h-cond'); e.className = c; e.textContent = c ? 'Condition · ' + c : ''; } }
   setHud('h-zone', (NET.mode ? 'CO-OP ' + (Object.keys(NET.remotes).length + 1) + ' · ' : '') + (DBG.noclip ? 'NOCLIP · ' : '') + (DBG.god ? 'GOD · ' : '') + zoneName() + (G.night ? (G.outK > .5 ? ' · exposed' : ' · no power') : G.gen ? '' : ' · lights out') + (G.open.blast ? '' : G.crank ? ' · door crank built' : ' · crank parts ' + partCount() + '/3'));
-  setHud('h-prompt', prompt ? prompt.text : '', true);
+  setHud('h-prompt', prompt ? (TOUCH.on ? prompt.text.replace(/<b>Hold F<\/b>/g, '<b>Hold USE</b>').replace(/<b>F<\/b>/g, '<b>USE</b>') : prompt.text) : '', true); if (TOUCH.on) { const u = $('t-use'), want = !!(prompt && (prompt.act || prompt.hold || prompt.holdAct)); if (u.classList.contains('ready') !== want) u.classList.toggle('ready', want); }
   setHud('h-power', (G.insta > 0 ? `<span>INSTANT KILL ${Math.ceil(G.insta)}</span>` : '') + (G.dbl > 0 ? `<span>DOUBLE POINTS ${Math.ceil(G.dbl)}</span>` : '') + (G.linkPad >= 0 ? `<span>LINK ${PADS[G.linkPad].name.toUpperCase()} ${Math.ceil(G.linkT)}s</span>` : ''), true);
   $('cross').style.opacity = String((1 - P.ads) * .85);
   hitT -= dt; $('hitm').style.opacity = hitT > 0 ? '1' : '0';
@@ -1726,16 +1768,17 @@ function devWorldRest(dt) {
    ===================================================================== */
 let wasLocked = false;
 const locked = () => document.pointerLockElement === canvas;
-function requestLock() { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+function goFull() { if (!TOUCH.on || document.fullscreenElement) return; try { const el = document.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el, { navigationUI: 'hide' }); if (r && r.catch) r.catch(() => {}); } if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }
+function requestLock() { if (TOUCH.on) return; try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 function showOverlay(mode) {
   $('overlay').hidden = false;
   if (mode === 'paused') { $('o-eyebrow').textContent = 'Paused · round ' + Math.max(1, G.round); $('o-title').innerHTML = 'Hold <em>fast</em>'; $('o-text').textContent = 'The dead wait for no one, but this once they will.'; $('o-stats').hidden = true; $('deploy').textContent = 'Resume'; }
   if (mode === 'over') { $('o-eyebrow').textContent = 'Blockhouse overrun'; $('o-title').innerHTML = `Survived <em>${Math.max(0, G.round - 1)}</em> round${G.round - 1 === 1 ? '' : 's'}`; $('o-text').textContent = 'You fell on round ' + G.round + '.'; $('o-stats').hidden = false; $('o-stats').innerHTML = `<span>Kills <b>${G.kills}</b></span><span>Headshots <b>${G.heads}</b></span><span>Points <b>${G.points}</b></span>`; $('deploy').textContent = 'Redeploy'; }
 }
-function gameOver() { if (NET.mode) NET.stop(); G.state = 'over'; if (locked()) document.exitPointerLock(); showOverlay('over'); }
-function pause() { if (G.state !== 'playing') return; G.state = 'paused'; mouse.down = false; showOverlay('paused'); if (NET.mode) $('o-text').textContent = 'The co-op game keeps running while this menu is open.'; }
+function gameOver() { if (TOUCH.on) $('touch').hidden = true; if (NET.mode) NET.stop(); G.state = 'over'; if (locked()) document.exitPointerLock(); showOverlay('over'); }
+function pause() { if (G.state !== 'playing') return; if (TOUCH.on) $('touch').hidden = true; G.state = 'paused'; mouse.down = false; showOverlay('paused'); if (NET.mode) $('o-text').textContent = 'The co-op game keeps running while this menu is open.'; }
 $('deploy').addEventListener('click', () => {
-  initAudio();
+  initAudio(); goFull();
   if (NET.lob && !NET.mode) lobbySet(null);
   if (G.state === 'menu' || G.state === 'over') newGame();
   G.state = 'playing'; $('overlay').hidden = true; $('hud').hidden = false; wasLocked = false; requestLock();
@@ -1768,6 +1811,44 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouse.down = mouse.right = false; });
 
+// ---- Touch controls: a floating move stick on the left, drag anywhere on the right to look, buttons for everything else.
+// Turned on by the first touch, so a phone gets them and a laptop with a mouse never sees them.
+const TOUCH = { on: false, fy: 0, sx: 0, sprint: false, stickId: null, lookId: null, fireId: null, ox: 0, oy: 0, lx: 0, ly: 0, fx: 0, fy2: 0 };
+function touchOn() {
+  if (TOUCH.on) return; TOUCH.on = true; document.body.classList.add('touch');
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1)); resize();   // phones fill a lot of pixels: draw at 1:1 to keep the frame rate up
+  const n = $('o-note'); if (n) n.textContent = 'Left thumb moves (push to the edge to sprint), drag on the right to look. Co-op works across any network.';
+}
+window.addEventListener('touchstart', touchOn, { passive: true, capture: true });
+{
+  const LOOK = .0055, stick = $('t-stick'), knob = stick.querySelector('i');
+  const look = (t, id) => { const s = LOOK * lerp(1, .55, P.ads), dx = t.clientX - TOUCH.lx, dy = t.clientY - TOUCH.ly; TOUCH.lx = t.clientX; TOUCH.ly = t.clientY; P.yaw -= dx * s; P.pitch = clamp(P.pitch - dy * s, -1.5, 1.5); };
+  const find = (e, id) => { for (const t of e.changedTouches) if (t.identifier === id) return t; return null; };
+  stick.addEventListener('touchstart', e => { e.preventDefault(); if (TOUCH.stickId !== null) return; const t = e.changedTouches[0]; TOUCH.stickId = t.identifier; TOUCH.ox = t.clientX; TOUCH.oy = t.clientY; knob.style.left = t.clientX + 'px'; knob.style.top = t.clientY + 'px'; stick.classList.add('held'); }, { passive: false });
+  stick.addEventListener('touchmove', e => { e.preventDefault(); const t = find(e, TOUCH.stickId); if (!t) return; let dx = t.clientX - TOUCH.ox, dy = t.clientY - TOUCH.oy; const R = 52, d = Math.hypot(dx, dy); if (d > R) { dx *= R / d; dy *= R / d; }
+    TOUCH.sx = dx / R; TOUCH.fy = -dy / R; TOUCH.sprint = d > R * 1.35 && -dy > Math.abs(dx); knob.style.setProperty('--kx', dx + 'px'); knob.style.setProperty('--ky', dy + 'px'); }, { passive: false });
+  const stickEnd = e => { if (!find(e, TOUCH.stickId)) return; TOUCH.stickId = null; TOUCH.sx = TOUCH.fy = 0; TOUCH.sprint = false; stick.classList.remove('held'); knob.style.setProperty('--kx', '0px'); knob.style.setProperty('--ky', '0px'); };
+  stick.addEventListener('touchend', stickEnd); stick.addEventListener('touchcancel', stickEnd);
+  const lk = $('t-look');
+  lk.addEventListener('touchstart', e => { e.preventDefault(); if (TOUCH.lookId !== null) return; const t = e.changedTouches[0]; TOUCH.lookId = t.identifier; TOUCH.lx = t.clientX; TOUCH.ly = t.clientY; }, { passive: false });
+  lk.addEventListener('touchmove', e => { e.preventDefault(); const t = find(e, TOUCH.lookId); if (t && G.state === 'playing') look(t); }, { passive: false });
+  const lookEnd = e => { if (find(e, TOUCH.lookId)) TOUCH.lookId = null; }; lk.addEventListener('touchend', lookEnd); lk.addEventListener('touchcancel', lookEnd);
+  // FIRE: hold to shoot, and keep dragging on it to aim at the same time
+  const fb = $('t-fire');
+  fb.addEventListener('touchstart', e => { e.preventDefault(); const t = e.changedTouches[0]; TOUCH.fireId = t.identifier; TOUCH.flx = t.clientX; TOUCH.fly = t.clientY; mouse.down = true; mouse.fresh = true; fb.classList.add('on'); }, { passive: false });
+  fb.addEventListener('touchmove', e => { e.preventDefault(); const t = find(e, TOUCH.fireId); if (!t || G.state !== 'playing') return; const s = LOOK * lerp(1, .55, P.ads); P.yaw -= (t.clientX - TOUCH.flx) * s; P.pitch = clamp(P.pitch - (t.clientY - TOUCH.fly) * s, -1.5, 1.5); TOUCH.flx = t.clientX; TOUCH.fly = t.clientY; }, { passive: false });
+  const fireEnd = e => { if (!find(e, TOUCH.fireId)) return; TOUCH.fireId = null; mouse.down = false; fb.classList.remove('on'); }; fb.addEventListener('touchend', fireEnd); fb.addEventListener('touchcancel', fireEnd);
+  const btn = (id, down, up) => { const b = $(id); b.addEventListener('touchstart', e => { e.preventDefault(); if (G.state !== 'playing') return; b.classList.add('on'); down(); }, { passive: false }); const end = e => { e.preventDefault(); b.classList.remove('on'); if (up) up(); }; b.addEventListener('touchend', end, { passive: false }); b.addEventListener('touchcancel', end, { passive: false }); };
+  btn('t-ads', () => { TOUCH.adsOn = !TOUCH.adsOn; mouse.right = TOUCH.adsOn; $('t-ads').dataset.held = TOUCH.adsOn ? 1 : ''; }, () => { $('t-ads').classList.toggle('on', !!TOUCH.adsOn); });   // tap to aim, tap again to lower
+  btn('t-jump', () => { keys.Space = true; }, () => { keys.Space = false; });
+  btn('t-use', () => { keys.KeyF = true; if (prompt && prompt.act) prompt.act(); }, () => { keys.KeyF = false; });
+  btn('t-reload', () => { if (!P.down) startReload(); });
+  btn('t-swap', () => { if (!P.down) swapWeapon(); });
+  btn('t-nade', () => { if (!P.down) throwGrenade(); });
+  btn('t-knife', () => { if (!P.down) knife(); });
+  $('t-pause').addEventListener('touchstart', e => { e.preventDefault(); TOUCH.adsOn = false; mouse.right = mouse.down = false; for (const k in keys) keys[k] = false; pause(); }, { passive: false });
+  $('touch').addEventListener('contextmenu', e => e.preventDefault());
+}
 function resize() { const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1; renderer.setSize(w, h, false); camera.aspect = vmCam.aspect = w / h; camera.updateProjectionMatrix(); vmCam.updateProjectionMatrix(); }
 window.addEventListener('resize', resize); resize();
 
@@ -2067,6 +2148,7 @@ NET.lobby = () => {
     : host ? 'A match is running. You can join it in progress.' : leads.length ? cleanName(leads[0].presence.n) + ' has a lobby open with ' + plural(inL.length, 'player') + '.' : others.length ? plural(others.length, 'other player') + ' on this page. Open a lobby for them to join.' : 'Nobody else has this page open yet.';
 };
 function coopBegin(mode) {
+  goFull();
   NET.lob = null; ['co-ready', 'co-start', 'co-leave'].forEach(id => $(id).hidden = true); $('co-roster').hidden = true;
   initAudio(); newGame(); NET.start(mode);
   G.state = 'playing'; $('overlay').hidden = true; $('hud').hidden = false; wasLocked = false; requestLock();
@@ -2103,7 +2185,8 @@ function frame(now) {
     updateWorld(dt); updateMap(dt); if (!P.down) updatePlayer(dt); findPrompt(); interactHeld(dt);
     if (NET.mode) NET.tick(dt);
     if (NET.mode === 'client') NET.client(dt); else { if (!DBG.freeze) { updateRound(dt); updateZombies(dt); } if (NET.mode === 'host') NET.host(dt); }
-    devTick(dt); updateGrenades(dt); updatePowerups(dt); updateFx(dt); updateHud(dt);
+    if (TOUCH.on) { const want = G.state !== 'playing'; if ($('touch').hidden !== want) $('touch').hidden = want; }
+  devTick(dt); updateGrenades(dt); updatePowerups(dt); updateFx(dt); updateHud(dt);
   } else if (G.state === 'menu') {
     menuYaw += dt * .12; camera.position.set(8, 1.62, 8.5); camera.rotation.set(0, menuYaw, 0); fire.intensity = 1.3 + Math.sin(now / 110) * .3; gunRoot.position.set(.2, -.19, -.42);
   }
